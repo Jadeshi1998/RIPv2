@@ -104,5 +104,4 @@ def test_rip_packet():
     except Exception as e:
         print(f"Test 6 Failed: {e}")
 
-if __name__ == "__main__":
-    test_rip_packet()
+test_rip_packet()
