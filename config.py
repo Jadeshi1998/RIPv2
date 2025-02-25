@@ -5,7 +5,7 @@ import re
 
 def read_config(filename):
     # read some file of router_id and input_ports
-
+    # maybe use dictionary to store the router_id and input_ports is better?
     router_txt=[]
     router_id = 0
     input_ports=[]
