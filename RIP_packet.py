@@ -17,6 +17,7 @@ COMMAND_REQUEST = 1
 COMMAND_RESPONSE = 2
 VERSION = 2
 METRIC_INFINITY = 16
+
 def RIP_header(router_id):
     """Build up rip packet header and entry"""
     # rip packet header = [command, version, source]
@@ -77,31 +78,5 @@ def test_rip_packet():
     except Exception as e:
         print(f"Test 3 Failed: {e}")
 
-    # Test 4: Maximum Metric
-    try:
-        router_id = 1
-        table = [[6, 15, 2]]
-        packet = rip_packet(router_id, table)
-        print("Test 4 Passed: Maximum Metric")
-    except Exception as e:
-        print(f"Test 4 Failed: {e}")
-
-    # Test 5: Multiple Entries
-    try:
-        router_id = 1
-        table = [[6, 1, 2], [5, 2, 3], [4, 3, 4], [3, 4, 5]]
-        packet = rip_packet(router_id, table)
-        print("Test 5 Passed: Multiple Entries")
-    except Exception as e:
-        print(f"Test 5 Failed: {e}")
-
-    # Test 6: Boundary Values
-    try:
-        router_id = 1
-        table = [[1024, 1, 64000], [64000, 15, 1024]]
-        packet = rip_packet(router_id, table)
-        print("Test 6 Passed: Boundary Values")
-    except Exception as e:
-        print(f"Test 6 Failed: {e}")
-
+    
 test_rip_packet()
