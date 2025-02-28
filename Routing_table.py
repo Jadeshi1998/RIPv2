@@ -1,4 +1,5 @@
 """
+    信息的存储地在router内部储存记录了当前网络的拓扑结构和最佳路径。
     Routing Table Structure
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |     Dest(key)   |   Next Hop   |   Cost   |   Garbage(bool)    |

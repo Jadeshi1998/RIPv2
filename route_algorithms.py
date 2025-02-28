@@ -14,6 +14,11 @@ packet6 = {'header': [2, 2, 6], 'entry': [(5, 1), (16, 5)]}
 
 #'header:[command,version,src]'  entry:(destionation,metric)
 
+##implement  Split Horizon+Poison Reverse  ##在这里，或者processer里面##
+#水平分割 Split Horizon：RIP从某个接口学到的路由，不会从该接口再发回给邻居路由器。
+#毒性反转 Poison Reverse:从某个接口学到路由后，从原接口发回邻居路由器，并将该路由的开销设置为16（即指明该路由不可达）。
+#https://support.huawei.com/enterprise/zh/doc/EDOC1100112408/6063042
+
 def routing_algorithms(table, packet):
     '''return a format of current routing table'''
     #initilize received routing table
@@ -26,10 +31,18 @@ def routing_algorithms(table, packet):
     #produrce routing table
     for i in range(len(ndst)):
         if ndst[i] != router_id:
+
             next_hop = src
+      
+            # Apply Split Horizon with Poison Reverse
+            #if ???
+            #    metric = 16  # Poison Reverse: set metric to 16 if learned from the same interface
+            #else:
             metric = table[src][0] + packet['entry'][i][0]
+
             if metric >16:
                 metric = 16
+
             # if not exist, make new
             if ndst[i] not in dst_id:
                 table[ndst[i]] = [metric, next_hop, False]
