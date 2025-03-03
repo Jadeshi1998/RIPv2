@@ -10,6 +10,7 @@ import time
 import random
 
 
+
 def create_and_bind(input_ports):
     """Create and bind UDP sockets for each input port."""
     sockets = []
@@ -23,13 +24,10 @@ def create_and_bind(input_ports):
 def send_to_neighbors(sock, neighbors, table):
     """Send a routing table to each neighbor using the specified socket."""
     neighbor_ip = '127.0.0.1'
-    for neighbor in neighbors:
-        neighbor_ip,neighbor_port = neighbor
-        sock.sendto(table.encode(), (neighbor_ip,neighbor_port ))
-        print(f"Sent routing table to port : {neighbor_port}")
+    for neighbor_port in neighbors:
+        sock.sendto(table.encode(), (neighbor_ip, neighbor_port))
+        print(f"Sent routing table to port: {neighbor_port}")
 
-def poison_send_to_neighbors(table, out_ports):
-    '''send packet to destination router with poison'''
 
 
 
@@ -95,7 +93,3 @@ def server(input_ports, neighbors):
         for sock in sockets:
             sock.close()
 
-# Example:
-input_ports = [6110, 6211, 7345]
-neighbors = [('127.0.0.1', 5000), ('127.0.0.1', 5002)]
-server(input_ports, neighbors)

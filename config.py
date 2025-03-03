@@ -5,6 +5,8 @@ import re
 
  
 def read_config(filename):
+    #dictionary to store the router_id and input_ports
+    ##
     # read some file of router_id and input_ports
     # maybe use dictionary to store the router_id and input_ports is better?
     router_txt=[]
@@ -31,7 +33,7 @@ def read_config(filename):
         if not (1024 <= int(port) <= 64000):
             raise ValueError(f"ERROR: Invalid input port {port}. Must be in range 1024-64000.")
         # print(port)
-        input_ports.append(port)
+        input_ports.append(int(port))
     print(f"Input_ports : {input_ports}")
     
     #get output_ports
@@ -41,9 +43,14 @@ def read_config(filename):
             raise ValueError(f"ERROR: Invalid output-port format") 
         if not (1024 <= int(port[0]) <= 64000):
             raise ValueError(f"ERROR: Invalid output port {port[0]}. Must be in range 1024-64000.")
-        output_ports.append(port)
+        output_ports.append([int(port[0]),int(port[1]),int(port[2])])
     print(f"Output_ports = [peer_port, metric, peer_ID]: {output_ports}")
-    table = [router_id, input_ports, output_ports]
+
+    table= {
+    'router_id': router_id,
+    'input_ports': input_ports,
+    'output_ports': output_ports
+    }
     return table
     
 
