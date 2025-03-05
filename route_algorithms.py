@@ -1,51 +1,73 @@
-table1 = {2: [1, 2, False], 6: [5, 6, False], 7: [8, 7, False]}
-table2 = {1: [1, 1, False], 3: [3, 3, False]}
-table3 = {2: [3, 2, False], 4: [4, 4, False]}
-table4 = {3: [4, 3, False], 5: [2, 5, False], 7: [6, 7, False]}
-table5 = {4: [2, 4, False], 6: [1, 6, False]}
-table6 = {1: [5, 1, False], 5: [1, 5, False]}
-# destionation:[metric,next hop,garbage_flag]
-packet1 = {'header': [2, 2, 1], 'entry': [(1, 2), (5, 6), (8, 7)]}
+table1 = {
+    2: {'next_hop': 6, 'cost': 1, 'garbage': False},
+    6: {'next_hop': 5, 'cost': 6, 'garbage': False},
+    7: {'next_hop': 8, 'cost': 7, 'garbage': False}}
+table2 = {
+    1: {'next_hop': 1, 'cost': 1, 'garbage': False},
+    3: {'next_hop': 3, 'cost': 3, 'garbage': False}}
+table3 = {
+    2: {'next_hop': 3, 'cost': 2, 'garbage': False},
+    4: {'next_hop': 4, 'cost': 4, 'garbage': False}}
+table4 = {
+    3: {'next_hop': 4, 'cost': 3, 'garbage': False},
+    5: {'next_hop': 2, 'cost': 5, 'garbage': False},
+    7: {'next_hop': 6, 'cost': 7, 'garbage': False}}
+table5 = {
+    4: {'next_hop': 2, 'cost': 4, 'garbage': False},
+    6: {'next_hop': 1, 'cost': 6, 'garbage': False}}
+table6 = {
+    1: {'next_hop': 5, 'cost': 1, 'garbage': False},
+    5: {'next_hop': 1, 'cost': 5, 'garbage': False}}
+
+#'header:[command,version,src_router_id]'  entry:(destionation,metric)
+packet1 = {'header': [2, 2, 1], 'entry': [(2, 1), (6, 5), (7, 8)]}
 packet2 = {'header': [2, 2, 2], 'entry': [(1, 1), (3, 3)]}
-packet3 = {'header': [2, 2, 3], 'entry': [(3, 2), (4, 4)]}
-packet4 = {'header': [2, 2, 4], 'entry': [(4, 3), (2, 5), (6, 7)]}
-packet5 = {'header': [2, 2, 5], 'entry': [(2, 4), (1, 6)]}
-packet6 = {'header': [2, 2, 6], 'entry': [(5, 1), (16, 5)]}
+packet3 = {'header': [2, 2, 3], 'entry': [(2, 3), (4, 4)]}
+packet4 = {'header': [2, 2, 4], 'entry': [(3, 4), (5, 2), (7, 6)]}
+packet5 = {'header': [2, 2, 5], 'entry': [(4, 2), (6, 1)]}
+packet6 = {'header': [2, 2, 6], 'entry': [(1, 5), (5, 16)]}
 
-#'header:[command,version,src]'  entry:(destionation,metric)
+def routing_algorithms(router_ID ,table, packet):  
+    """Return a format of updated routing table."""
+    #收到一个pkt，更新routing table
+    #记录来自哪里 -> src_router_id
+    src_router_id = packet['header'][2]
+    #记录'entry', eg.[(2, 1), (6, 5), (7, 8)]
+    for entry in packet['entry']:
+        destination = entry[0]
+        metric = entry[1]
 
-def routing_algorithms(table, packet):
-    '''return a format of current routing table'''
-    #initilize received routing table
-    dst_id = table.keys()
-    ndst = []
-    for k in packet['entry']:
-        ndst.append(k[1])
-    src = packet['header'][2]
-
-    #produrce routing table
-    for i in range(len(ndst)):
-        if ndst[i] != router_id:
-
-            next_hop = src
-            metric = table[src][0] + packet['entry'][i][0]
-
-            if metric >16:
+        #如果destination不是当前router_ID，避免出现自己用自己
+        if destination != router_ID:
+            #如果metric大于16，metric = inf = 16
+            if metric > 16:
                 metric = 16
-
-            # if not exist, make new
-            if ndst[i] not in dst_id:
-                table[ndst[i]] = [metric, next_hop, False]
-            #if next hop is not changed
-            if next_hop == table[ndst[i]][1]:
-                table[ndst[i]] = [metric, next_hop, False] if ndst[i] in table else [metric, next_hop, False]
-
-            # if a better path
-            if metric < table[ndst[i]][0]:
-                table[ndst[i]] = [metric, next_hop, False]              
+                #对垃圾的定义 inf ？=垃圾， 还是过时=垃圾？
+                #this is a infinate route, not update ?? but garbage? it?
             
+            #scenario 1: 如果destination不在当前的routing table中，加入新的destination
+            if destination not in table:
+                table[destination] = {'next_hop': src_router_id, 'cost': metric, 'garbage': False}
+
+            #scenario 2: 如果next_hop相同,有更好的路径，更新
+            if src_router_id == table[destination]['next_hop']:
+                if metric < table[destination]['cost']:
+                    table[destination]['cost'] = metric
+
+            #scenario 3: 如果next_hop不同,如果有更好的路径,更新为用src_router_id为next_hop
+            if metric < table[destination]['cost']:
+                table[destination]['next_hop'] =  src_router_id
+                table[destination]['cost'] = metric
     return table
 
-router_id = 1
-routing_table = routing_algorithms(table1, packet6)
-print(routing_table)
+#router_ID为该路由表的路由器编号1号，模拟收到来自“邻居”6号路由器的6号包
+router_ID = 1
+routing_table = routing_algorithms(router_ID , table1, packet6)
+print(f'router_ID 1 : {routing_table}\n')
+#原本2号的表只有到2，6和7的路径，通过路由器6的更新“(1, 5), (5, 16)”，排除了到1号的回路，加入了新的路径到5。
+
+#router_ID为该路由表的路由器编号2号，模拟收到来自“邻居”5号路由器的5号包
+router_ID = 2
+routing_table = routing_algorithms(router_ID , table2, packet5)
+print(f'router_ID 2 : {routing_table}')
+#原本2号的表只有到1和3的路径，通过路由器5的更新“(4, 2), (6, 1)”，加入了新的路径到4和6。

@@ -6,9 +6,7 @@ import re
  
 def read_config(filename):
     #dictionary to store the router_id and input_ports
-    ##
     # read some file of router_id and input_ports
-    # maybe use dictionary to store the router_id and input_ports is better?
     router_txt=[]
     router_id = 0
     input_ports=[]
@@ -46,17 +44,18 @@ def read_config(filename):
         output_ports.append([int(port[0]),int(port[1]),int(port[2])])
     print(f"Output_ports = [peer_port, metric, peer_ID]: {output_ports}")
 
-    table= {
+    config= {
     'router_id': router_id,
     'input_ports': input_ports,
     'output_ports': output_ports
     }
-    return table
+    return config
     
 
 def main():
-    config_filename = 'router1.txt'  
-    read_config(config_filename)
+    config_filename = 'router4.txt'  
+    config = read_config(config_filename)
+    #print(config)
 
 if __name__ == "__main__":
     main()

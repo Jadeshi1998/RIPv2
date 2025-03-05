@@ -4,7 +4,6 @@
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |     Dest(key)   |   Next Hop   |   Cost   |   Garbage(bool)    |
     +---------------+---------------+-------------------------------+
-    router ID , input ports , output ports, timers
 
 """
 METRIC_INFINITY = 16
@@ -48,7 +47,6 @@ def test_routing_table():
     print_table()
     flag_garbage(3)
     print_table()
-    remove_route(2)
-    print_table()
+    print(routing_table)
 
 test_routing_table()
