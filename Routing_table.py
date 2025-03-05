@@ -32,21 +32,16 @@ def flag_garbage(destination):
         routing_table[destination]['garbage'] = True
         print(f"Route marked as garbage: {destination}")
 
-def print_table():
-    """Print the current routing table."""
-    print("Routing Table:")
-    for dest, info in routing_table.items():
-        print(f"Destination: {dest}, Next Hop: {info['next_hop']}, Cost: {info['cost']}, Garbage: {info['garbage']}")
-
+def table():
+    """Return the routing table."""
+    return routing_table
 
 def test_routing_table():
     #(destination, next_hop, cost,)
     new_route(2, 6, 1)
     new_route(3, 5, 2)
     new_route(4, 4, 3)
-    print_table()
     flag_garbage(3)
-    print_table()
     print(routing_table)
 
-test_routing_table()
+#test_routing_table()

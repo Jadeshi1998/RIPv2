@@ -52,10 +52,9 @@ def read_config(filename):
     return config
     
 
-def main():
+def test():
     config_filename = 'router4.txt'  
     config = read_config(config_filename)
     #print(config)
 
-if __name__ == "__main__":
-    main()
+#test()

@@ -31,6 +31,7 @@ def RIP_entry(table):
     entry = []
     for destination, info in table.items():
         if info['garbage'] != True:  
+            #if destination != poisoned_route:
             metric = info['cost']
             entry.append([destination, metric])
             print(f'Destination: {destination}, Cost: {metric}')
@@ -44,7 +45,7 @@ def rip_packet(router_id, table):
     return packet
 
 
-router_id = 1
-table = {3: {'next_hop': 5, 'cost': 2, 'garbage': False}, 4: {'next_hop': 4, 'cost': 3, 'garbage': False}} # (destination:{next_hop, cost ,garbage flag})
-packet = rip_packet(router_id, table)
-print(packet)
+#router_id = 1
+#table = {3: {'next_hop': 5, 'cost': 2, 'garbage': False}, 4: {'next_hop': 4, 'cost': 3, 'garbage': False}} # (destination:{next_hop, cost ,garbage flag})
+#packet = rip_packet(router_id, table)
+#print(packet)

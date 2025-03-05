@@ -42,8 +42,6 @@ def routing_algorithms(router_ID ,table, packet):
             #如果metric大于16，metric = inf = 16
             if metric > 16:
                 metric = 16
-                #对垃圾的定义 inf ？=垃圾， 还是过时=垃圾？
-                #this is a infinate route, not update ?? but garbage? it?
             
             #scenario 1: 如果destination不在当前的routing table中，加入新的destination
             if destination not in table:
