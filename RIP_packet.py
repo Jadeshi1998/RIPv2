@@ -44,8 +44,26 @@ def rip_packet(router_id, table):
     packet = {'header':header, 'entry':entries}
     return packet
 
+def set_poisoned_reverse(router_ID, table, neighbor_ID):
+    """Set poisoned reverse for routes learned from a specific neighbor."""
+    poisoned_entries = []
+    for destination, route_info in table.items():
+        # Check if the route was learned from the neighbor
+        if route_info['next_hop'] == neighbor_ID:
+            # Set the metric to infinity for this route
+            poisoned_entries.append((destination, 16))
+        else:
+            # Keep the original metric for other routes
+            poisoned_entries.append((destination, route_info['cost']))
+    # Construct the packet with the poisoned reverse entries
+    poisoned_packet = {
+        'header': RIP_header(router_ID),
+        'entry': poisoned_entries
+    }
+    return poisoned_packet
 
 #router_id = 1
 #table = {3: {'next_hop': 5, 'cost': 2, 'garbage': False}, 4: {'next_hop': 4, 'cost': 3, 'garbage': False}} # (destination:{next_hop, cost ,garbage flag})
 #packet = rip_packet(router_id, table)
 #print(packet)
+#{'header': [1, 2, 1], 'entry': [[3, 2], [4, 3]]}

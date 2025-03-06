@@ -1,4 +1,5 @@
 """
+This acting as server in a router.
 Server creates as many UDP sockets as it has input ports and binds
 one socket to each input port. One of the input sockets can be used for
 sending UDP datagrams to neighbors.
@@ -17,27 +18,43 @@ import RIP_packet as packet
 router_ID = None
 routing_table = {}
 def init(config_filename):
+    """Initialize the routing table inside a router from config file,
+    also grnerate the first round RIP packet , this pkt will pass to send to the neighbors in port
+    """
+
+    neighbor_mapping=[]
     config = cfg.read_config(config_filename)
     for router in config['output_ports']:
-        #Output_ports = [peer_port, metric, peer_ID]
+        #Output_ports = [peer_port, cost, peer_ID]
+        peer_port = router[0]
+        cost = router[1]
+        peer_ID = router[2]
         #new_route(destination, next_hop, cost)
-        table.new_route(router[2], router[2], router[1])
+        neighbor_mapping.append({"port" : peer_port, "ID":peer_ID})
+        table.new_route(peer_ID, peer_ID, cost)
     routing_table = table.table()
-    print(routing_table)
+    #print(routing_table)
     input_ports = config['input_ports']
     neighbor_port = [i[0] for i in config['output_ports']]
     router_ID = config['router_id']
     rip_pkt = packet.rip_packet(router_ID, routing_table)
+    return router_ID , routing_table , input_ports, neighbor_port , rip_pkt , neighbor_mapping
 
-    return routing_table , input_ports, neighbor_port , rip_pkt
-
-def pkt_tostr(rip_pkt):
+def pkt_to_str(rip_pkt):
+    """Convert a RIP packet from dictionary to a string for sending over UDP."""
     header_str = ','.join(map(str, rip_pkt['header']))
     entries_str = ';'.join(','.join(map(str, entry)) for entry in rip_pkt['entry'])
-    packet_str = f'header={header_str} | entries={entries_str}'
-
+    packet_str = f'header={header_str} || entries={entries_str}'
     return packet_str
     
+def str_to_pkt(pkt_str):
+    """Convert a RIP packet from a string to a dictionary for processing."""
+    parts = pkt_str.split(" || ")
+    header_str = parts[0].split("=")[1]
+    entries_str = parts[1].split("=")[1]
+    header = list(map(int, header_str.split(",")))
+    entries = [list(map(int, entry.split(","))) for entry in entries_str.split(";") if entry]
+    return {'header': header, 'entry': entries}
 
 
 def create_and_bind(input_ports):
@@ -50,20 +67,21 @@ def create_and_bind(input_ports):
         print(f"Listening on UDP port {port}")
     return sockets
 
-def send_to_neighbors(sock, neighbors, pkt):
+def send_to_neighbors(sock, neighbor_port, rip_pkt):
     """Send a routing table to each neighbor using the specified socket."""
     neighbor_ip = '127.0.0.1'
-    for neighbor_port in neighbors:
-        sock.sendto(pkt.encode(), (neighbor_ip, neighbor_port))
-        print(f"Sent routing packet to port: {neighbor_port}")
+    str_pck = pkt_to_str(rip_pkt)
+    sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
+    print(f"Sent routing packet to port: {neighbor_port}")
 
 
 
-def periodic_update(sock, neighbors, pkt):
+def periodic_update(sock, neighbors, rip_pkt):
     """Send periodic updates to neighbors.every 30 +/- 5 seconds"""
     while True:
         time.sleep( 30 + random.uniform(-5, 5))
-        send_to_neighbors(sock, neighbors, pkt)
+        for neighbor_port in neighbors:
+            send_to_neighbors(sock, neighbor_port, rip_pkt)
 
 def manage_route_timers():
     """Manage 
@@ -91,26 +109,38 @@ def manage_route_timers():
 
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
-    routing_table , input_ports, neighbors , rip_pkt =  init(config_filename)
-    pkt = pkt_tostr(rip_pkt)
+    router_ID , routing_table , input_ports, neighbors , rip_pkt , neighbor_mapping =  init(config_filename)
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     # Start periodic update thread
-    threading.Thread(target=periodic_update, args=(send_socket, neighbors,pkt), daemon=True).start()
+    threading.Thread(target=periodic_update, args=(send_socket, neighbors, rip_pkt), daemon=True).start()
     # Start route management thread
     threading.Thread(target=manage_route_timers, daemon=True).start()
 
     try:
         while True:
+            neighbor_id = None
             #wait for any socket to have data
             readable, _writable_, _exceptional_ = select.select(sockets, [], [])
             for sock in readable:
                 data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
-                print(f"Received data from {addr}: {data.decode()}")
-                #######################################
-                # process_raw_data(data.decode())
-                # algratim to process the received data
-                #
+                txt = data.decode()
+                print(f"PKT REV : {txt}")
+                pkt = str_to_pkt(data.decode())
+                print(f"Received data from {addr}: {pkt}")
+                print(neighbor_mapping)
+                for neighbor in neighbor_mapping:
+                    if addr == neighbor["port"]:
+                        neighbor_id = neighbor["ID"]
+                routing_table,update = ra.routing_algorithms(router_ID ,routing_table, pkt)
+                #print(routing_table)
+                if update:
+                    poisoned_packet = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
+                    for neighbor_port in neighbors:
+                    #split horizon : learn from addr don't send back update to this neighbor 
+                        if neighbor_port != addr[1]:
+                            send_to_neighbors(sock, neighbor_port, poisoned_packet)
+                
                 #######################################
 
     except KeyboardInterrupt:

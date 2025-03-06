@@ -1,23 +1,23 @@
 table1 = {
-    2: {'next_hop': 6, 'cost': 1, 'garbage': False},
-    6: {'next_hop': 5, 'cost': 6, 'garbage': False},
-    7: {'next_hop': 8, 'cost': 7, 'garbage': False}}
+    2: {'next_hop': 2, 'cost': 1, 'garbage': False},
+    6: {'next_hop': 6, 'cost': 6, 'garbage': False},
+    7: {'next_hop': 7, 'cost': 7, 'garbage': False}}
 table2 = {
     1: {'next_hop': 1, 'cost': 1, 'garbage': False},
     3: {'next_hop': 3, 'cost': 3, 'garbage': False}}
 table3 = {
-    2: {'next_hop': 3, 'cost': 2, 'garbage': False},
+    2: {'next_hop': 2, 'cost': 2, 'garbage': False},
     4: {'next_hop': 4, 'cost': 4, 'garbage': False}}
 table4 = {
-    3: {'next_hop': 4, 'cost': 3, 'garbage': False},
-    5: {'next_hop': 2, 'cost': 5, 'garbage': False},
-    7: {'next_hop': 6, 'cost': 7, 'garbage': False}}
+    3: {'next_hop': 3, 'cost': 3, 'garbage': False},
+    5: {'next_hop': 5, 'cost': 5, 'garbage': False},
+    7: {'next_hop': 7, 'cost': 7, 'garbage': False}}
 table5 = {
-    4: {'next_hop': 2, 'cost': 4, 'garbage': False},
-    6: {'next_hop': 1, 'cost': 6, 'garbage': False}}
+    4: {'next_hop': 4, 'cost': 4, 'garbage': False},
+    6: {'next_hop': 6, 'cost': 6, 'garbage': False}}
 table6 = {
-    1: {'next_hop': 5, 'cost': 1, 'garbage': False},
-    5: {'next_hop': 1, 'cost': 5, 'garbage': False}}
+    1: {'next_hop': 1, 'cost': 1, 'garbage': False},
+    5: {'next_hop': 5, 'cost': 5, 'garbage': False}}
 
 #'header:[command,version,src_router_id]'  entry:(destionation,metric)
 packet1 = {'header': [2, 2, 1], 'entry': [(2, 1), (6, 5), (7, 8)]}
@@ -29,6 +29,7 @@ packet6 = {'header': [2, 2, 6], 'entry': [(1, 5), (5, 16)]}
 
 def routing_algorithms(router_ID ,table, packet):  
     """Return a format of updated routing table."""
+    update = False
     #收到一个pkt，更新routing table
     #记录来自哪里 -> src_router_id
     src_router_id = packet['header'][2]
@@ -42,21 +43,28 @@ def routing_algorithms(router_ID ,table, packet):
             #如果metric大于16，metric = inf = 16
             if metric > 16:
                 metric = 16
-            
+
+            new_cost = metric + table.get(src_router_id, {}).get('cost', 0)
+
             #scenario 1: 如果destination不在当前的routing table中，加入新的destination
             if destination not in table:
-                table[destination] = {'next_hop': src_router_id, 'cost': metric, 'garbage': False}
+                table[destination] = {'next_hop': src_router_id, 'cost': new_cost  , 'garbage': False}
+                update = True
+            else:
+                #scenario 2: 如果next_hop相同,有更好的路径，更新
+                if src_router_id == table[destination]['next_hop']:
+                    if new_cost  < table[destination]['cost']:
+                        table[destination]['cost'] = new_cost 
+                        update = True
+                #scenario 3: 如果next_hop不同,如果有更好的路径,更新为用src_router_id为next_hop
+                if new_cost < table[destination]['cost']:
+                    table[destination]['next_hop'] =  src_router_id
+                    table[destination]['cost'] = new_cost
+                    update = True
+    return table,update
 
-            #scenario 2: 如果next_hop相同,有更好的路径，更新
-            if src_router_id == table[destination]['next_hop']:
-                if metric < table[destination]['cost']:
-                    table[destination]['cost'] = metric
 
-            #scenario 3: 如果next_hop不同,如果有更好的路径,更新为用src_router_id为next_hop
-            if metric < table[destination]['cost']:
-                table[destination]['next_hop'] =  src_router_id
-                table[destination]['cost'] = metric
-    return table
+
 
 #router_ID为该路由表的路由器编号1号，模拟收到来自“邻居”6号路由器的6号包
 router_ID = 1
@@ -66,6 +74,6 @@ print(f'router_ID 1 : {routing_table}\n')
 
 #router_ID为该路由表的路由器编号2号，模拟收到来自“邻居”5号路由器的5号包
 router_ID = 2
-routing_table = routing_algorithms(router_ID , table2, packet5)
+routing_table = routing_algorithms(router_ID , table2, packet3)
 print(f'router_ID 2 : {routing_table}')
-#原本2号的表只有到1和3的路径，通过路由器5的更新“(4, 2), (6, 1)”，加入了新的路径到4和6。
+#原本2号的表只有到1和3的路径，通过路由器5的更新“(4, 2+自己到2 cost), (6, 1+自己到1 cost)”，加入了新的路径到4和6。
