@@ -64,82 +64,98 @@ def create_and_bind(input_ports):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(('127.0.0.1', port))
         sockets.append(sock)
-        print(f"Listening on UDP port {port}")
+        #print(f"Listening on UDP port {port}")
     return sockets
 
-def send_to_neighbors(sock, neighbor_port, rip_pkt):
+def send_to_neighbors(sock, neighbor_port, rip_pkt,recive_port):
     """Send a routing table to each neighbor using the specified socket."""
     neighbor_ip = '127.0.0.1'
     str_pck = pkt_to_str(rip_pkt)
-    sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
-    print(f"Sent routing packet to port: {neighbor_port}")
-
+    if neighbor_port != recive_port:
+        sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
+        print(f"Sent routing packet to port: {neighbor_port}")
 
 
 def periodic_update(sock, neighbors, rip_pkt):
-    """Send periodic updates to neighbors.every 30 +/- 5 seconds"""
-    while True:
-        time.sleep( 30 + random.uniform(-5, 5))
-        for neighbor_port in neighbors:
-            send_to_neighbors(sock, neighbor_port, rip_pkt)
+    """Send periodic updates to neighbors.
+       every 30 +/- 5 seconds
+    """
+    for neighbor_port in neighbors:
+        send_to_neighbors(sock, neighbor_port, rip_pkt)
 
-def manage_route_timers():
-    """Manage 
+def manage_timers():
+    """
        route timeouts : 180 seconds
        garbage collection: 120 seconds
-       """
+       current_time = 10
+       next_time = 11
+    """
+    next_time = time.time() + 1
     while True:
         current_time = time.time()
-        for destination, route_info in list(routing_table.items()):
-            if current_time - route_info['last_update'] > 180:
-                # Mark route as expired
-                # Set metric to 16
-                route_info['metric'] = 16
-                # Set garbage collection timer
-                route_info['garbage_timer'] = current_time + 120
-                print(f"Route to {destination} expired -> garbage collection")
+        if current_time >= next_time:
+            for destination, route_info in list(routing_table.items()):
+                if current_time - route_info['last_update'] > 180:
+                    route_info['metric'] = 16
+                    route_info['garbage_timer'] = current_time + 120
+                    print(f"Route to {destination} expired -> garbage collection")
 
-            if 'garbage_timer' in route_info and current_time > route_info['garbage_timer']:
-                # Remove route after been garbaged 
-                del routing_table[destination]
-                print(f"Route to {destination} removed.")
+                if 'garbage_timer' in route_info and current_time > route_info['garbage_timer']:
+                    del routing_table[destination]
+                    print(f"Route to {destination} removed.")
 
-        time.sleep(1)  # Check every 1 second
-
+            next_time = current_time + 1
+        time.sleep(0.1)  # Sleep for a short time to prevent busy-waiting
 
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
-    router_ID , routing_table , input_ports, neighbors , rip_pkt , neighbor_mapping =  init(config_filename)
+    router_ID, routing_table, input_ports, neighbors, rip_pkt, neighbor_mapping = init(config_filename)
+    print(f'init routing table: {routing_table}')
+    addr_port = None
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
-    # Start periodic update thread
-    threading.Thread(target=periodic_update, args=(send_socket, neighbors, rip_pkt), daemon=True).start()
-    # Start route management thread
-    threading.Thread(target=manage_route_timers, daemon=True).start()
+    for neighbor_port in neighbors:
+        send_to_neighbors(send_socket, neighbor_port, rip_pkt,addr_port)
 
+    next_periodic_update_time = time.time() + 30 + random.uniform(-5, 5)
+    
     try:
         while True:
+            current_time = time.time()
+            rip_pkt = packet.rip_packet(router_ID, routing_table)
+            if  current_time >= next_periodic_update_time:
+                for neighbor_port in neighbors:
+                    send_to_neighbors(send_socket, neighbor_port, rip_pkt,addr_port)
+                next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
+
+            #manage_timers()
+            
             neighbor_id = None
             #wait for any socket to have data
-            readable, _writable_, _exceptional_ = select.select(sockets, [], [])
+            readable, _writable_, _exceptional_ = select.select(sockets, [], [],1)
             for sock in readable:
                 data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
                 txt = data.decode()
-                print(f"PKT REV : {txt}")
                 pkt = str_to_pkt(data.decode())
                 print(f"Received data from {addr}: {pkt}")
-                print(neighbor_mapping)
+                print(f'addr {addr}')
+                print(f'{routing_table}')
+                #print(f'routing table: {routing_table}')
                 for neighbor in neighbor_mapping:
-                    if addr == neighbor["port"]:
+                    #neighbor_mapping : {"port" : peer_port(2221), "ID":peer_ID(2)}
+                    # addr : ('127.0.0.1', 2221)
+                    addr_port = addr[1]
+                    if addr_port == neighbor["port"]:
                         neighbor_id = neighbor["ID"]
+                        #这里的neighbor_id  记录收到来自这个ID的包，用于之后split和poision
+
                 routing_table,update = ra.routing_algorithms(router_ID ,routing_table, pkt)
-                #print(routing_table)
                 if update:
+                    print(f'Update routing table: {routing_table}')
                     poisoned_packet = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
                     for neighbor_port in neighbors:
                     #split horizon : learn from addr don't send back update to this neighbor 
-                        if neighbor_port != addr[1]:
-                            send_to_neighbors(sock, neighbor_port, poisoned_packet)
+                            send_to_neighbors(sock, neighbor_port, poisoned_packet,addr_port)
                 
                 #######################################
 
@@ -148,4 +164,3 @@ def main(config_filename):
     finally:
         for sock in sockets:
             sock.close()
-

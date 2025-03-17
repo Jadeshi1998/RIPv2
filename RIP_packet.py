@@ -34,7 +34,7 @@ def RIP_entry(table):
             #if destination != poisoned_route:
             metric = info['cost']
             entry.append([destination, metric])
-            print(f'Destination: {destination}, Cost: {metric}')
+            #print(f'Destination: {destination}, Cost: {metric}')
     return entry
 
 def rip_packet(router_id, table):

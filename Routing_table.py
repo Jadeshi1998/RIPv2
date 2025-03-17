@@ -18,19 +18,20 @@ def new_route(destination, next_hop, cost, garbage=False):
         'cost': cost,
         'garbage': garbage
     }
-    print(f'Route added: {destination} -> Next Hop: {next_hop}, Cost: {cost}, Garbage: {garbage}')
+    #print(f'Route added: {destination} -> Next Hop: {next_hop}, Cost: {cost}, Garbage: {garbage}')
 
 def remove_route(destination):
     """Remove a route from the routing table."""
     if destination in routing_table:
         del routing_table[destination]
-        print(f"Route removed: {destination}")
+        
+        #print(f"Route removed: {destination}")
 
 def flag_garbage(destination):
     """ Flag a route as garbage. """
     if destination in routing_table:
         routing_table[destination]['garbage'] = True
-        print(f"Route marked as garbage: {destination}")
+        #print(f"Route marked as garbage: {destination}")
 
 def table():
     """Return the routing table."""

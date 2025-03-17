@@ -15,7 +15,7 @@ def read_config(filename):
     for line in file.readlines():
         line = re.split(', | |\n',line)
         router_txt.append(line)
-    print(f"Router text : {router_txt}")
+    #print(f"Router text : {router_txt}")
 
     #get router_id
     try:
@@ -24,15 +24,15 @@ def read_config(filename):
         raise ValueError("ERROR: router_id must be an integer.")
     if not (1 <= router_id <= 64000):
         raise ValueError(f"ERROR: Invalid router ID {router_id}. Must be in range 1-64000.")
-    print(f"Router ID : {router_id}")
+   # print(f"Router ID : {router_id}")
 
     #get input_ports
     for port in router_txt[1][1:-1]:
         if not (1024 <= int(port) <= 64000):
             raise ValueError(f"ERROR: Invalid input port {port}. Must be in range 1024-64000.")
-        # print(port)
+        #print(port)
         input_ports.append(int(port))
-    print(f"Input_ports : {input_ports}")
+    #print(f"Input_ports : {input_ports}")
     
     #get output_ports
     for port in router_txt[2][1:-1]:
@@ -42,7 +42,7 @@ def read_config(filename):
         if not (1024 <= int(port[0]) <= 64000):
             raise ValueError(f"ERROR: Invalid output port {port[0]}. Must be in range 1024-64000.")
         output_ports.append([int(port[0]),int(port[1]),int(port[2])])
-    print(f"Output_ports = [peer_port, metric, peer_ID]: {output_ports}")
+    #print(f"Output_ports = [peer_port, metric, peer_ID]: {output_ports}")
 
     config= {
     'router_id': router_id,
