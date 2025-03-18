@@ -44,12 +44,12 @@ def rip_packet(router_id, table):
     packet = {'header':header, 'entry':entries}
     return packet
 
-def set_poisoned_reverse(router_ID, table, neighbor_ID):
+def set_poisoned_reverse(router_ID, table, port):
     """Set poisoned reverse for routes learned from a specific neighbor."""
     poisoned_entries = []
     for destination, route_info in table.items():
         # Check if the route was learned from the neighbor
-        if route_info['next_hop'] == neighbor_ID:
+        if (route_info['next_hop'] == port):
             # Set the metric to infinity for this route
             poisoned_entries.append((destination, 16))
         else:
