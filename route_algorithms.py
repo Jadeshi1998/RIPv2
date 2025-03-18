@@ -29,6 +29,7 @@ packet6 = {'header': [2, 2, 6], 'entry': [[1, 5], [5, 1]]}
 packet7 = {'header': [2, 2, 6], 'entry': [[1, 8], [4, 6]]}
 def routing_algorithms(router_ID ,table, packet):  
     """Return a format of updated routing table."""
+    
     update = False
     #收到一个pkt，更新routing table
     #记录来自哪里 -> src_router_id
@@ -63,6 +64,12 @@ def routing_algorithms(router_ID ,table, packet):
                     update = True
     return table,update
 
+
+def split_horizon(table):
+    split_horizon_id=[]
+    for destination in table:
+        split_horizon_id.append(table[destination]['next_hop'])
+    return split_horizon_id
 
 
 

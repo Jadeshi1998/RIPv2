@@ -15,14 +15,23 @@ import route_algorithms as ra
 import Routing_table as table
 import RIP_packet as packet
 
+global router_ID
+global routing_table
+global split_horizon
+
 router_ID = None
 routing_table = {}
+split_horizon_port = [] 
+
 def init(config_filename):
     """Initialize the routing table inside a router from config file,
     also grnerate the first round RIP packet , this pkt will pass to send to the neighbors in port
     """
+    global routing_table  
+    global router_ID  
 
-    neighbor_mapping=[]
+    neighbor_mapping={}
+    
     config = cfg.read_config(config_filename)
     for router in config['output_ports']:
         #Output_ports = [peer_port, cost, peer_ID]
@@ -30,7 +39,7 @@ def init(config_filename):
         cost = router[1]
         peer_ID = router[2]
         #new_route(destination, next_hop, cost)
-        neighbor_mapping.append({"port" : peer_port, "ID":peer_ID})
+        neighbor_mapping[peer_port] = peer_ID
         table.new_route(peer_ID, peer_ID, cost)
     routing_table = table.table()
     #print(routing_table)
@@ -38,7 +47,7 @@ def init(config_filename):
     neighbor_port = [i[0] for i in config['output_ports']]
     router_ID = config['router_id']
     rip_pkt = packet.rip_packet(router_ID, routing_table)
-    return router_ID , routing_table , input_ports, neighbor_port , rip_pkt , neighbor_mapping
+    return input_ports, neighbor_port , rip_pkt , neighbor_mapping
 
 def pkt_to_str(rip_pkt):
     """Convert a RIP packet from dictionary to a string for sending over UDP."""
@@ -67,11 +76,13 @@ def create_and_bind(input_ports):
         #print(f"Listening on UDP port {port}")
     return sockets
 
-def send_to_neighbors(sock, neighbor_port, rip_pkt,recive_port):
+def send_to_neighbors(sock, neighbor_port, rip_pkt):
     """Send a routing table to each neighbor using the specified socket."""
+    global split_horizon_port
+    
     neighbor_ip = '127.0.0.1'
     str_pck = pkt_to_str(rip_pkt)
-    if neighbor_port != recive_port:
+    if neighbor_port not in split_horizon_port:
         sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
         print(f"Sent routing packet to port: {neighbor_port}")
 
@@ -109,13 +120,16 @@ def manage_timers():
 
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
-    router_ID, routing_table, input_ports, neighbors, rip_pkt, neighbor_mapping = init(config_filename)
+    global routing_table  
+    global router_ID     
+    global split_horizon_port
+
+    input_ports, neighbors, rip_pkt, neighbor_mapping = init(config_filename)
     print(f'init routing table: {routing_table}')
-    addr_port = None
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
-        send_to_neighbors(send_socket, neighbor_port, rip_pkt,addr_port)
+        send_to_neighbors(send_socket, neighbor_port, rip_pkt)
 
     next_periodic_update_time = time.time() + 30 + random.uniform(-5, 5)
     
@@ -125,7 +139,7 @@ def main(config_filename):
             rip_pkt = packet.rip_packet(router_ID, routing_table)
             if  current_time >= next_periodic_update_time:
                 for neighbor_port in neighbors:
-                    send_to_neighbors(send_socket, neighbor_port, rip_pkt,addr_port)
+                    send_to_neighbors(send_socket, neighbor_port, rip_pkt)
                 next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
 
             #manage_timers()
@@ -137,25 +151,25 @@ def main(config_filename):
                 data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
                 txt = data.decode()
                 pkt = str_to_pkt(data.decode())
-                print(f"Received data from {addr}: {pkt}")
-                print(f'addr {addr}')
-                print(f'{routing_table}')
-                #print(f'routing table: {routing_table}')
-                for neighbor in neighbor_mapping:
-                    #neighbor_mapping : {"port" : peer_port(2221), "ID":peer_ID(2)}
-                    # addr : ('127.0.0.1', 2221)
-                    addr_port = addr[1]
-                    if addr_port == neighbor["port"]:
-                        neighbor_id = neighbor["ID"]
-                        #这里的neighbor_id  记录收到来自这个ID的包，用于之后split和poision
+                recive_port = addr[1]
+                print(f"Received data from port {recive_port}: {pkt}")
 
-                routing_table,update = ra.routing_algorithms(router_ID ,routing_table, pkt)
+                #running algorithm with input pkt, output a new table and a bool
+                routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
                 if update:
-                    print(f'Update routing table: {routing_table}')
+                    split_horizon_id = ra.split_horizon(routing_table)
+                
+                    for id in split_horizon_id:
+                        # Find the corresponding port for the given ID in neighbor_mapping
+                        for port, neighbor_id in neighbor_mapping.items():
+                            if neighbor_id == id:
+                                split_horizon_port.append(port)
+                    neighbor_id = neighbor_mapping[recive_port]
                     poisoned_packet = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
                     for neighbor_port in neighbors:
-                    #split horizon : learn from addr don't send back update to this neighbor 
-                            send_to_neighbors(sock, neighbor_port, poisoned_packet,addr_port)
+                        send_to_neighbors(sock, neighbor_port, poisoned_packet)
+                    print(f'Update routing table: {routing_table}')
+                   
                 
                 #######################################
 
