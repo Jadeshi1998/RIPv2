@@ -153,6 +153,9 @@ def main(config_filename):
                 pkt = str_to_pkt(data.decode())
                 recive_port = addr[1]
                 print(f"Received data from port {recive_port}: {pkt}")
+                #from a port not in the relationship when init
+                if recive_port not in neighbor_mapping:
+                    neighbor_mapping[recive_port] = pkt['header'][0]
 
                 #running algorithm with input pkt, output a new table and a bool
                 routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
