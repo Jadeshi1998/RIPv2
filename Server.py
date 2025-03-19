@@ -17,11 +17,12 @@ import RIP_packet as packet
 
 global router_ID
 global routing_table
-global split_horizon
+global neighbor_mapping 
 
 router_ID = None
 routing_table = {}
-split_horizon_port = [] 
+neighbor_mapping={}
+#neighbor_mapping = {port: neighbor_id}
 
 def init(config_filename):
     """Initialize the routing table inside a router from config file,
@@ -29,8 +30,8 @@ def init(config_filename):
     """
     global routing_table  
     global router_ID  
+    global neighbor_mapping 
 
-    neighbor_mapping={}
     
     config = cfg.read_config(config_filename)
     for router in config['output_ports']:
@@ -47,7 +48,7 @@ def init(config_filename):
     neighbor_port = [i[0] for i in config['output_ports']]
     router_ID = config['router_id']
     rip_pkt = packet.rip_packet(router_ID, routing_table)
-    return input_ports, neighbor_port , rip_pkt , neighbor_mapping
+    return input_ports, neighbor_port , rip_pkt 
 
 def pkt_to_str(rip_pkt):
     """Convert a RIP packet from dictionary to a string for sending over UDP."""
@@ -92,6 +93,20 @@ def periodic_update(sock, neighbors, rip_pkt):
     for neighbor_port in neighbors:
         send_to_neighbors(sock, neighbor_port, rip_pkt)
 
+def trigger_update(send_socket,neighbors):
+    """Send triggered updates to neighbors."""
+    global routing_table  
+    global router_ID   
+    global neighbor_mapping 
+    for neighbor_port in neighbors:
+        for destination, route_info in routing_table.items():
+            #1: {'next_hop': 1, 'cost': 1, 'garbage': False},
+            neighbor_id = neighbor_mapping[neighbor_port]
+            rip_pkt = packet.rip_packet(router_ID, routing_table)
+            if (route_info['next_hop'] == neighbor_id) and destination != neighbor_id:
+                rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
+        send_to_neighbors(send_socket, neighbor_port, rip_pkt)
+
 def manage_timers():
     """
        route timeouts : 180 seconds
@@ -121,26 +136,27 @@ def main(config_filename):
     global routing_table  
     global router_ID   
     global split_horizon_port  
+    global neighbor_mapping 
 
-
-    input_ports, neighbors, rip_pkt, neighbor_mapping = init(config_filename)
+    ##################----------init----------##################
+    input_ports, neighbors, init_rip_pkt= init(config_filename)
     print(f'init routing table: {routing_table}')
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
-        send_to_neighbors(send_socket, neighbor_port, rip_pkt)
+        send_to_neighbors(send_socket, neighbor_port, init_rip_pkt)
+    ##################----------init----------##################
 
     next_periodic_update_time = time.time() + 30 + random.uniform(-5, 5)
     
     try:
         while True:
             current_time = time.time()
-            rip_pkt = packet.rip_packet(router_ID, routing_table)
             if  current_time >= next_periodic_update_time:
-                for neighbor_port in neighbors:
-                    send_to_neighbors(send_socket, neighbor_port, rip_pkt)
+                trigger_update(send_socket,neighbors)
+                print(f'Routing table: {routing_table}')
                 next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
-
+       
             #manage_timers()
             
             neighbor_id = None
@@ -159,16 +175,7 @@ def main(config_filename):
                 #running algorithm with input pkt, output a new table and a bool
                 routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
                 if update:
-                    rip_pkt = packet.rip_packet(router_ID, routing_table)
-                    neighbor_id = neighbor_mapping[recive_port]
-                    print(neighbor_id)
-                    poisoned_packet = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
-                    for neighbor_port in neighbors:
-                        if neighbor_port  == recive_port:
-                            send_to_neighbors(sock, neighbor_port, poisoned_packet)
-                        else:
-                            send_to_neighbors(sock, neighbor_port, rip_pkt)
-                    print(f'Update routing table: {routing_table}')
+                    trigger_update(send_socket,neighbors)
                    
                 
                 #######################################

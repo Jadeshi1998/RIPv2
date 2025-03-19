@@ -31,10 +31,9 @@ def RIP_entry(table):
     entry = []
     for destination, info in table.items():
         if info['garbage'] != True:  
-            #if destination != poisoned_route:
+    
             metric = info['cost']
             entry.append([destination, metric])
-            #print(f'Destination: {destination}, Cost: {metric}')
     return entry
 
 def rip_packet(router_id, table):
@@ -44,12 +43,13 @@ def rip_packet(router_id, table):
     packet = {'header':header, 'entry':entries}
     return packet
 
-def set_poisoned_reverse(router_ID, table, port):
+def set_poisoned_reverse(router_ID, table, port_id):
     """Set poisoned reverse for routes learned from a specific neighbor."""
     poisoned_entries = []
     for destination, route_info in table.items():
-        # Check if the route was learned from the neighbor
-        if (route_info['next_hop'] == port):
+        # a从c口收到信息，c-d = 1，并且使用了该路径，a发给收到口c到d的路径为16。
+        #table = {destination: {'next_hop': 2, 'cost': 3, 'garbage': False},
+        if (route_info['next_hop'] == port_id) and destination != port_id:
             # Set the metric to infinity for this route
             poisoned_entries.append((destination, 16))
         else:
