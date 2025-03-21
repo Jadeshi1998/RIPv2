@@ -6,17 +6,21 @@
     +---------------+---------------+-------------------------------+
 
 """
+import time
+
 METRIC_INFINITY = 16
 routing_table = {}
 
-def new_route(destination, next_hop, cost, garbage=False):
+def new_route(destination, next_hop, cost,time = time.time(), garbage=False):
     """Add or update a route in the routing table."""
     if not (1 <= cost < METRIC_INFINITY):
         raise ValueError(f"ERROR: Invalid metric {cost}. Must be in range 1-15.")
     routing_table[destination] = {
         'next_hop': next_hop,
         'cost': cost,
-        'garbage': garbage
+        'last_update_time':time,
+        'garbage': garbage,
+        'timeout' : None
     }
     #print(f'Route added: {destination} -> Next Hop: {next_hop}, Cost: {cost}, Garbage: {garbage}')
 
@@ -24,17 +28,25 @@ def remove_route(destination):
     """Remove a route from the routing table."""
     if destination in routing_table:
         del routing_table[destination]
-        
-        #print(f"Route removed: {destination}")
+        print("  ")
+        print("!"*40)
+        print(f"Route to {destination} expired 180s -> remove_route")
+
 
 def flag_garbage(destination):
     """ Flag a route as garbage. """
     if destination in routing_table:
         routing_table[destination]['garbage'] = True
-        #print(f"Route marked as garbage: {destination}")
+        print("  ")
+        print("!"*40)
+        print(f"Route to {destination} expired 120s -> garbage collection")
+
+def set_infinity(destination):
+    """ Set a route's metric to infinity. """
+    if destination in routing_table:
+        routing_table[destination]['cost'] = METRIC_INFINITY
 
 def table():
-    """Return the routing table."""
     return routing_table
 
 def test_routing_table():

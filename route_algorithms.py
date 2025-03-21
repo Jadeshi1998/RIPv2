@@ -1,5 +1,6 @@
+import time
 table1 = {
-    2: {'next_hop': 2, 'cost': 1, 'garbage': False},
+    2: {'next_hop': 2, 'cost': 1, 'garbage': False,'last_update_time':time.time(),'timeout':120},
     6: {'next_hop': 6, 'cost': 5, 'garbage': False},
     7: {'next_hop': 7, 'cost': 8, 'garbage': False}}
 table2 = {
@@ -27,32 +28,53 @@ packet4 = {'header': [2, 2, 4], 'entry': [[3, 4], [5, 2], [7, 6]]}
 packet5 = {'header': [2, 2, 5], 'entry': [[4, 2], [6, 1]]}
 packet6 = {'header': [2, 2, 6], 'entry': [[1, 5], [5, 1]]}
 packet7 = {'header': [2, 2, 6], 'entry': [[1, 8], [4, 6]]}
-def routing_algorithms(router_ID ,table, packet):  
-    """Return a format of updated routing table."""
+
+import time
+
+global init_table
+def init_routing_table(init_routing_table):
+    global init_table
+    init_table = init_routing_table
+    return None
+
     
+def routing_algorithms(router_ID ,table, packet,init_routing_table):  
+    """Return a format of updated routing table."""
+    global init_table
+    init_table = init_routing_table
     update = False
     #收到一个pkt，更新routing table
     #记录来自哪里 -> src_router_id
     src_router_id = packet['header'][2]
     #记录'entry', eg.[(2, 1), (6, 5), (7, 8)]
+    all_entry_destination = []
     for entry in packet['entry']:
         destination = entry[0]
         metric = entry[1]
+        all_entry_destination.append(destination)
 
+    for entry in packet['entry']:
+        destination = entry[0]
+        metric = entry[1]
         #如果destination不是当前router_ID，避免出现自己用自己
         if destination != router_ID:
             #如果metric大于16，metric = inf = 16
-            if metric > 16:
-                metric = 16
-
             new_cost = metric + table.get(src_router_id, {}).get('cost', 0)
+            if new_cost > 16:
+                new_cost = 16
 
             #scenario 1: 如果destination不在当前的routing table中，加入新的destination
             if destination not in table:
-                table[destination] = {'next_hop': src_router_id, 'cost': new_cost  , 'garbage': False}
-                update = True
+                if new_cost < 16:
+                    table[destination] = {'next_hop': src_router_id, 'cost': new_cost  , 'garbage': False , 'last_update_time' : time.time(), 'timeout': None}
+                    update = True
+    
             else:
                 #scenario 2: 如果next_hop相同,有更好的路径，更新
+                if table[destination]['garbage'] == True:
+                    table[destination]['garbage'] = False
+                    table[destination]['cost'] = init_table[destination]['cost']
+
                 if src_router_id == table[destination]['next_hop']:
                     if new_cost  < table[destination]['cost']:
                         table[destination]['cost'] = new_cost 
@@ -62,16 +84,25 @@ def routing_algorithms(router_ID ,table, packet):
                     table[destination]['next_hop'] =  src_router_id
                     table[destination]['cost'] = new_cost
                     update = True
+
+        for dest_table, route_info in table.items():
+        #原本高速我能通过自己去6，但是现在新发的包没有去6的路径，那么我就要把原本的路径标记为garbage
+            if route_info['next_hop'] == src_router_id and dest_table != src_router_id:
+                if dest_table not in all_entry_destination:
+                    table[dest_table]['garbage'] = True
+   
+
     return table,update
 
 
-def split_horizon(table):
-    split_horizon_id=[]
-    for destination in table:
-        split_horizon_id.append(table[destination]['next_hop'])
-    return split_horizon_id
-
-
+def timer_update(table,port_id):
+    current_time = time.time()
+  
+    for destination, route_info in table.items():
+        if route_info['next_hop'] == port_id:
+            table[destination]['last_update_time'] = current_time
+            table[destination]['garbage'] = False
+    return table
 
 #router_ID为该路由表的路由器编号1号，模拟收到来自“邻居”6号路由器的6号包
 #router_ID = 1
@@ -83,7 +114,7 @@ def split_horizon(table):
 #print(f'router_ID next : {routing_table_2}\n')
 
 #router_ID为该路由表的路由器编号2号，模拟收到来自“邻居”5号路由器的5号包
-router_ID = 2
+#router_ID = 2
 #routing_table = routing_algorithms(router_ID , table2, packet3)
 #print(f'router_ID 2 : {routing_table}')
 #原本2号的表只有到1和3的路径，通过路由器5的更新“(4, 2+自己到2 cost), (6, 1+自己到1 cost)”，加入了新的路径到4和6。
