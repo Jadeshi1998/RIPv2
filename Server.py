@@ -27,7 +27,6 @@ def init(config_filename):
     """Initialize the routing table inside a router from config file,
     also grnerate the first round RIP packet , this pkt will pass to send to the neighbors in port
     """
-    global routing_table  
     global router_ID  
     global neighbor_mapping 
 
@@ -41,12 +40,12 @@ def init(config_filename):
         #new_route(destination, next_hop, cost)
         neighbor_mapping[peer_port] = peer_ID
         table.new_route(peer_ID, peer_ID, cost)
-    routing_table = table.table()
+    origin_routing_table = table.table()
     input_ports = config['input_ports']
     neighbor_port = [i[0] for i in config['output_ports']]
     router_ID = config['router_id']
-    rip_pkt = packet.rip_packet(router_ID, routing_table)
-    return input_ports, neighbor_port , rip_pkt 
+    rip_pkt = packet.rip_packet(router_ID, origin_routing_table)
+    return origin_routing_table,input_ports, neighbor_port , rip_pkt 
 
 def pkt_to_str(rip_pkt):
     """Convert a RIP packet from dictionary to a string for sending over UDP."""
@@ -111,10 +110,9 @@ def main(config_filename):
     global neighbor_mapping 
 
     ##################----------init----------##################
-    input_ports, neighbors, init_rip_pkt= init(config_filename)
+    origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
+    routing_table  = origin_routing_table
     print_routing_table()
-    init_routing_table  = routing_table
-    ra.init_routing_table(init_routing_table)
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
@@ -137,7 +135,7 @@ def main(config_filename):
                 for destination in destinations_to_check:
                     route_info = routing_table[destination]
                     #180s not recive from this port:
-                    if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
+                    if current_time - route_info['last_update_time'] > 30 and route_info['garbage'] == False:
                         table.set_infinity(destination)
                         table.flag_garbage(destination)
                         routing_table[destination]['timeout']=current_time
@@ -166,9 +164,15 @@ def main(config_filename):
                 if receive_port not in neighbor_mapping:
                     neighbor_mapping[receive_port] = pkt['header'][0]
                 neighbor_id = neighbor_mapping[receive_port]
-                ra.timer_update(routing_table,neighbor_id)
+                routing_table = ra.timer_update(routing_table,neighbor_id)
+
+                if routing_table[neighbor_id]['garbage'] == True:
+                    routing_table[neighbor_id]['garbage'] = False
+                    print(origin_routing_table)
+                    print("init cost = ",origin_routing_table[destination]['cost'])
+                    routing_table[neighbor_id]['cost'] = origin_routing_table[destination]['cost']
                 #running algorithm with input pkt, output a new table and a bool
-                routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt,init_routing_table)
+                routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
                 print_routing_table()
                 if update:
                     trigger_update(send_socket,neighbors)

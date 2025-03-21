@@ -31,17 +31,11 @@ packet7 = {'header': [2, 2, 6], 'entry': [[1, 8], [4, 6]]}
 
 import time
 
-global init_table
-def init_routing_table(init_routing_table):
-    global init_table
-    init_table = init_routing_table
-    return None
 
     
-def routing_algorithms(router_ID ,table, packet,init_routing_table):  
+def routing_algorithms(router_ID ,table, packet):  
     """Return a format of updated routing table."""
-    global init_table
-    init_table = init_routing_table
+
     update = False
     #收到一个pkt，更新routing table
     #记录来自哪里 -> src_router_id
@@ -71,10 +65,6 @@ def routing_algorithms(router_ID ,table, packet,init_routing_table):
     
             else:
                 #scenario 2: 如果next_hop相同,有更好的路径，更新
-                if table[destination]['garbage'] == True:
-                    table[destination]['garbage'] = False
-                    table[destination]['cost'] = init_table[destination]['cost']
-
                 if src_router_id == table[destination]['next_hop']:
                     if new_cost  < table[destination]['cost']:
                         table[destination]['cost'] = new_cost 
@@ -101,7 +91,6 @@ def timer_update(table,port_id):
     for destination, route_info in table.items():
         if route_info['next_hop'] == port_id:
             table[destination]['last_update_time'] = current_time
-            table[destination]['garbage'] = False
     return table
 
 #router_ID为该路由表的路由器编号1号，模拟收到来自“邻居”6号路由器的6号包
