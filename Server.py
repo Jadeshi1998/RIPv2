@@ -15,11 +15,9 @@ import Routing_table as table
 import RIP_packet as packet
 
 global router_ID
-global routing_table
 global neighbor_mapping 
 
 router_ID = None
-routing_table = {}
 neighbor_mapping={}
 #neighbor_mapping = {port: neighbor_id}
 
@@ -79,9 +77,9 @@ def send_to_neighbors(sock, neighbor_port, rip_pkt):
     str_pck = pkt_to_str(rip_pkt)
     sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
 
-def trigger_update(send_socket,neighbors):
+def trigger_update(routing_table,send_socket,neighbors):
     """Send triggered updates to neighbors."""
-    global routing_table  
+
     global router_ID   
     global neighbor_mapping 
     for neighbor_port in neighbors:
@@ -93,7 +91,7 @@ def trigger_update(send_socket,neighbors):
                 rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
         send_to_neighbors(send_socket, neighbor_port, rip_pkt)
 
-def print_routing_table():
+def print_routing_table(routing_table):
     print("  ")
     print("#" * 20 + "Routing Table:" + "#" * 20)
     for destination, info in routing_table.items():
@@ -105,14 +103,13 @@ def print_routing_table():
 
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
-    global routing_table  
     global router_ID   
     global neighbor_mapping 
 
     ##################----------init----------##################
     origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
-    routing_table  = origin_routing_table
-    print_routing_table()
+    routing_table = origin_routing_table
+    print_routing_table(routing_table)
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
@@ -125,8 +122,8 @@ def main(config_filename):
         while True:
             current_time = time.time()
             if  current_time >= next_periodic_update_time:
-                trigger_update(send_socket,neighbors)
-                print_routing_table()
+                trigger_update(routing_table,send_socket,neighbors)
+                print_routing_table(routing_table)
                 next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
             if current_time >= next_sec:
                 # avoid modifying the dictionary while iterating over it
@@ -135,14 +132,13 @@ def main(config_filename):
                 for destination in destinations_to_check:
                     route_info = routing_table[destination]
                     #180s not recive from this port:
-                    if current_time - route_info['last_update_time'] > 30 and route_info['garbage'] == False:
+                    if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
                         table.set_infinity(destination)
                         table.flag_garbage(destination)
                         routing_table[destination]['timeout']=current_time
-                    if route_info['garbage'] == True and current_time - route_info['timeout'] >= 120:
+                    if route_info['garbage'] == True and current_time - route_info['timeout'] >= 180:
                         table.remove_route(destination)
                 
-                #trigger_update(send_socket,neighbors)
                 next_sec = current_time + 1
 
             #wait for any socket to have data
@@ -167,15 +163,15 @@ def main(config_filename):
                 routing_table = ra.timer_update(routing_table,neighbor_id)
 
                 if routing_table[neighbor_id]['garbage'] == True:
+                    #back connection with this router
                     routing_table[neighbor_id]['garbage'] = False
-                    print(origin_routing_table)
-                    print("init cost = ",origin_routing_table[destination]['cost'])
+                    origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
                     routing_table[neighbor_id]['cost'] = origin_routing_table[destination]['cost']
                 #running algorithm with input pkt, output a new table and a bool
                 routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
-                print_routing_table()
+                print_routing_table(routing_table)
                 if update:
-                    trigger_update(send_socket,neighbors)
+                    trigger_update(routing_table,send_socket,neighbors)
                 #######################################
 
     except KeyboardInterrupt:
