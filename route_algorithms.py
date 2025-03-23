@@ -41,11 +41,6 @@ def routing_algorithms(router_ID ,table, packet):
     #记录来自哪里 -> src_router_id
     src_router_id = packet['header'][2]
     #记录'entry', eg.[(2, 1), (6, 5), (7, 8)]
-    all_entry_destination = []
-    for entry in packet['entry']:
-        destination = entry[0]
-        metric = entry[1]
-        all_entry_destination.append(destination)
 
     for entry in packet['entry']:
         destination = entry[0]
@@ -68,19 +63,19 @@ def routing_algorithms(router_ID ,table, packet):
                 if src_router_id == table[destination]['next_hop']:
                     if new_cost  < table[destination]['cost']:
                         table[destination]['cost'] = new_cost 
+                        table[destination]['garbage']= False
+                        table[destination]['last_update_time'] = time.time()
+                        table[destination]['timeout']= None
                         update = True
                 #scenario 3: 如果next_hop不同,如果有更好的路径,更新为用src_router_id为next_hop
                 if new_cost < table[destination]['cost']:
                     table[destination]['next_hop'] =  src_router_id
                     table[destination]['cost'] = new_cost
+                    table[destination]['garbage']= False
+                    table[destination]['last_update_time'] = time.time()
+                    table[destination]['timeout']= None
                     update = True
 
-        for dest_table, route_info in table.items():
-        #原本高速我能通过自己去6，但是现在新发的包没有去6的路径，那么我就要把原本的路径标记为garbage
-            if route_info['next_hop'] == src_router_id and dest_table != src_router_id:
-                if dest_table not in all_entry_destination:
-                    table[dest_table]['garbage'] = True
-   
 
     return table,update
 

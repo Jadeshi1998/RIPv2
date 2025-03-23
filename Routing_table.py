@@ -9,52 +9,42 @@
 import time
 
 METRIC_INFINITY = 16
-routing_table = {}
 
-def new_route(destination, next_hop, cost,time = time.time(), garbage=False):
+def new_route(destination, next_hop, cost,routing_table,time = time.time(), garbage=False):
     """Add or update a route in the routing table."""
     if not (1 <= cost < METRIC_INFINITY):
         raise ValueError(f"ERROR: Invalid metric {cost}. Must be in range 1-15.")
     routing_table[destination] = {
-        'next_hop': next_hop,
-        'cost': cost,
-        'last_update_time':time,
-        'garbage': garbage,
-        'timeout' : None
+    'next_hop': next_hop,
+    'cost': cost,
+    'last_update_time': time,
+    'garbage': garbage,
+    'timeout': None
     }
     #print(f'Route added: {destination} -> Next Hop: {next_hop}, Cost: {cost}, Garbage: {garbage}')
-
-def remove_route(destination):
+    return routing_table
+def remove_route(destination,routing_table):
     """Remove a route from the routing table."""
     if destination in routing_table:
         del routing_table[destination]
         print("  ")
         print("!"*40)
         print(f"Route to {destination} expired 180s -> remove_route")
+    return routing_table
 
-
-def flag_garbage(destination):
+def flag_garbage(destination,routing_table):
     """ Flag a route as garbage. """
     if destination in routing_table:
         routing_table[destination]['garbage'] = True
         print("  ")
         print("!"*40)
         print(f"Route to {destination} expired 120s -> garbage collection")
-
-def set_infinity(destination):
+    return routing_table
+def set_infinity(destination,routing_table):
     """ Set a route's metric to infinity. """
     if destination in routing_table:
         routing_table[destination]['cost'] = METRIC_INFINITY
-
-def table():
     return routing_table
 
-def test_routing_table():
-    #(destination, next_hop, cost,)
-    new_route(2, 6, 1)
-    new_route(3, 5, 2)
-    new_route(4, 4, 3)
-    flag_garbage(3)
-    print(routing_table)
 
 #test_routing_table()

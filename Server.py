@@ -8,6 +8,8 @@ import socket
 import select
 import time
 import random
+import copy
+
 
 import config as cfg
 import route_algorithms as ra
@@ -28,7 +30,7 @@ def init(config_filename):
     global router_ID  
     global neighbor_mapping 
 
-    
+    routing_table = {}
     config = cfg.read_config(config_filename)
     for router in config['output_ports']:
         #Output_ports = [peer_port, cost, peer_ID]
@@ -37,8 +39,8 @@ def init(config_filename):
         peer_ID = router[2]
         #new_route(destination, next_hop, cost)
         neighbor_mapping[peer_port] = peer_ID
-        table.new_route(peer_ID, peer_ID, cost)
-    origin_routing_table = table.table()
+        table.new_route(peer_ID, peer_ID, cost,routing_table)
+    origin_routing_table = routing_table
     input_ports = config['input_ports']
     neighbor_port = [i[0] for i in config['output_ports']]
     router_ID = config['router_id']
@@ -101,6 +103,19 @@ def print_routing_table(routing_table):
         print(f"   Timeout: {info['timeout']}")
         print("-" * 50)
 
+def print_RIP(receive_port,pkt):
+    print("  ")
+    print(f"Received data from port {receive_port}:")
+    print("Header:")
+    print(f"  Version: {pkt['header'][0]}")
+    print(f"  Type: {pkt['header'][1]}")
+    print(f"  Length: {pkt['header'][2]}")
+    print("Entries:")
+    for entry in pkt['entry']:
+        print(f"  Destination: {entry[0]}, Cost: {entry[1]}")
+                    #from a port not in the relationship when init
+
+
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
     global router_ID   
@@ -108,7 +123,8 @@ def main(config_filename):
 
     ##################----------init----------##################
     origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
-    routing_table = origin_routing_table
+    # Make a copy of the original routing avoid point to the same dictionary object in memory. 
+    routing_table = copy.deepcopy(origin_routing_table)
     print_routing_table(routing_table)
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
@@ -133,11 +149,11 @@ def main(config_filename):
                     route_info = routing_table[destination]
                     #180s not recive from this port:
                     if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
-                        table.set_infinity(destination)
-                        table.flag_garbage(destination)
+                        routing_table = table.set_infinity(destination,routing_table)
+                        routing_table = table.flag_garbage(destination,routing_table)
                         routing_table[destination]['timeout']=current_time
                     if route_info['garbage'] == True and current_time - route_info['timeout'] >= 180:
-                        table.remove_route(destination)
+                        routing_table = table.remove_route(destination,routing_table)
                 
                 next_sec = current_time + 1
 
@@ -147,26 +163,21 @@ def main(config_filename):
                 data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
                 pkt = str_to_pkt(data.decode())
                 receive_port = addr[1]
-                print("  ")
-                print(f"Received data from port {receive_port}:")
-                print("Header:")
-                print(f"  Version: {pkt['header'][0]}")
-                print(f"  Type: {pkt['header'][1]}")
-                print(f"  Length: {pkt['header'][2]}")
-                print("Entries:")
-                for entry in pkt['entry']:
-                    print(f"  Destination: {entry[0]}, Cost: {entry[1]}")
-                                #from a port not in the relationship when init
+                print_RIP(receive_port,pkt)
                 if receive_port not in neighbor_mapping:
                     neighbor_mapping[receive_port] = pkt['header'][0]
                 neighbor_id = neighbor_mapping[receive_port]
                 routing_table = ra.timer_update(routing_table,neighbor_id)
 
                 if routing_table[neighbor_id]['garbage'] == True:
+                    print("routing_table[neighbor_id]lalalalalalalal")
                     #back connection with this router
                     routing_table[neighbor_id]['garbage'] = False
-                    origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
-                    routing_table[neighbor_id]['cost'] = origin_routing_table[destination]['cost']
+                    routing_table[neighbor_id]['last_update_time'] = current_time
+                    routing_table[neighbor_id]['timeout'] = None
+                    routing_table[neighbor_id]['cost'] = origin_routing_table[neighbor_id]['cost']
+                    print("routing_table",routing_table)
+                    print("origin_routing_table",origin_routing_table)
                 #running algorithm with input pkt, output a new table and a bool
                 routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
                 print_routing_table(routing_table)
