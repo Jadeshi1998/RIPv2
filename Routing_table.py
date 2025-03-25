@@ -19,10 +19,7 @@ def new_route(destination, next_hop, cost,routing_table,time = time.time(), garb
     'cost': cost,
     'last_update_time': time,
     'garbage': garbage,
-    'timeout': None
     }
-    #print(f'Route added: {destination} -> Next Hop: {next_hop}, Cost: {cost}, Garbage: {garbage}')
-    return routing_table
 def remove_route(destination,routing_table):
     """Remove a route from the routing table."""
     if destination in routing_table:
@@ -47,4 +44,3 @@ def set_infinity(destination,routing_table):
     return routing_table
 
 
-#test_routing_table()

@@ -18,7 +18,9 @@ import RIP_packet as packet
 
 global router_ID
 global neighbor_mapping 
+global current_time
 
+current_time = time.time()
 router_ID = None
 neighbor_mapping={}
 #neighbor_mapping = {port: neighbor_id}
@@ -74,14 +76,13 @@ def create_and_bind(input_ports):
     return sockets
 
 def send_to_neighbors(sock, neighbor_port, rip_pkt):
-    """Send a routing table to each neighbor using the specified socket."""
+    """Send the rip pk to each neighbor using the specified socket."""
     neighbor_ip = '127.0.0.1'
     str_pck = pkt_to_str(rip_pkt)
     sock.sendto(str_pck.encode(), (neighbor_ip, neighbor_port))
 
 def trigger_update(routing_table,send_socket,neighbors):
-    """Send triggered updates to neighbors."""
-
+    """ triverse each neighbors, Get rip pk ready then to send to neighbors port."""
     global router_ID   
     global neighbor_mapping 
     for neighbor_port in neighbors:
@@ -93,17 +94,52 @@ def trigger_update(routing_table,send_socket,neighbors):
                 rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
         send_to_neighbors(send_socket, neighbor_port, rip_pkt)
 
+def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt):
+    """
+    If a neighbor router is back to alive
+    Add this neighbor router back to the routing table.
+    The rest of the routing table will be updated by the routing algorithm.
+    """
+    global current_time
+    update = False
+    if neighbor_id in routing_table:
+        if routing_table[neighbor_id]['garbage'] == True:
+            #back connection with this router
+            routing_table[neighbor_id]['garbage'] = False
+            routing_table[neighbor_id]['last_update_time'] = current_time
+            routing_table[neighbor_id]['cost'] = origin_routing_table[neighbor_id]['cost']
+            update = True
+    #running algorithm with input pkt, output a new table and a bool
+    if neighbor_id  not in routing_table:
+        routing_table[neighbor_id] = {'next_hop': neighbor_id, 'cost': pkt['header'][2], 'garbage': False, 'last_update_time': current_time}
+        update = True
+    return update
+
+def check_alive(destinations_to_check,routing_table):
+    """Check if the route in the routing table is still alive."""
+    global current_time
+    for destination in destinations_to_check:
+        route_info = routing_table[destination]
+        #180s not recive from this port:
+        if current_time - route_info['last_update_time'] > 30 and route_info['garbage'] == False:
+            routing_table = table.set_infinity(destination,routing_table)
+            routing_table = table.flag_garbage(destination,routing_table)
+        if route_info['garbage'] == True and current_time - route_info['last_update_time'] >= 35:
+            routing_table = table.remove_route(destination,routing_table)
+    return routing_table
+
 def print_routing_table(routing_table):
+    """Nicer look in print the contents of the routing table."""
     print("  ")
     print("#" * 20 + "Routing Table:" + "#" * 20)
     for destination, info in routing_table.items():
         print(f"               Destination: {destination}")
         print(f"   Next Hop: {info['next_hop']}    Cost: {info['cost']}    Garbage: {info['garbage']}")
         print(f"   Last Update Time: {info['last_update_time']}")
-        print(f"   Timeout: {info['timeout']}")
         print("-" * 50)
 
 def print_RIP(receive_port,pkt):
+    """Nicer look in print the contents of a received RIP packet."""
     print("  ")
     print(f"Received data from port {receive_port}:")
     print("Header:")
@@ -121,7 +157,7 @@ def main(config_filename):
     global router_ID   
     global neighbor_mapping 
 
-    ##################----------init----------##################
+######################-------------init-------------########################
     origin_routing_table,input_ports, neighbors, init_rip_pkt= init(config_filename)
     # Make a copy of the original routing avoid point to the same dictionary object in memory. 
     routing_table = copy.deepcopy(origin_routing_table)
@@ -130,33 +166,28 @@ def main(config_filename):
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
         send_to_neighbors(send_socket, neighbor_port, init_rip_pkt)
-    ##################----------init----------##################
+######################-------------init-------------########################
 
     next_periodic_update_time = time.time() + 30 + random.uniform(-5, 5)
     next_sec = time.time() + 1
+
+#-------------------------------deamon loop----------------------------------------------------#
     try:
         while True:
             current_time = time.time()
-            if  current_time >= next_periodic_update_time:
-                trigger_update(routing_table,send_socket,neighbors)
-                print_routing_table(routing_table)
-                next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
-            if current_time >= next_sec:
-                # avoid modifying the dictionary while iterating over it
-                destinations_to_check = list(routing_table.keys())
-               
-                for destination in destinations_to_check:
-                    route_info = routing_table[destination]
-                    #180s not recive from this port:
-                    if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
-                        routing_table = table.set_infinity(destination,routing_table)
-                        routing_table = table.flag_garbage(destination,routing_table)
-                        routing_table[destination]['timeout']=current_time
-                    if route_info['garbage'] == True and current_time - route_info['timeout'] >= 180:
-                        routing_table = table.remove_route(destination,routing_table)
-                
-                next_sec = current_time + 1
+           
+            if len(routing_table) != 0:
+                if  current_time >= next_periodic_update_time:
+                    trigger_update(routing_table,send_socket,neighbors)
+                    print_routing_table(routing_table)
+                    next_periodic_update_time = current_time + 30 + random.uniform(-5, 5)
+                if current_time >= next_sec:
+                    # avoid modifying the dictionary while iterating over it
+                    destinations_to_check = list(routing_table.keys())
+                    routing_table = check_alive(destinations_to_check,routing_table)
+                    next_sec = current_time + 1
 
+#-------------------------------listen----------------------------------------------------#
             #wait for any socket to have data
             readable, _writable_, _exceptional_ = select.select(sockets, [], [],1)
             for sock in readable:
@@ -164,26 +195,19 @@ def main(config_filename):
                 pkt = str_to_pkt(data.decode())
                 receive_port = addr[1]
                 print_RIP(receive_port,pkt)
+                
                 if receive_port not in neighbor_mapping:
                     neighbor_mapping[receive_port] = pkt['header'][0]
                 neighbor_id = neighbor_mapping[receive_port]
                 routing_table = ra.timer_update(routing_table,neighbor_id)
+                 
+                update = add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt)
 
-                if routing_table[neighbor_id]['garbage'] == True:
-                    print("routing_table[neighbor_id]lalalalalalalal")
-                    #back connection with this router
-                    routing_table[neighbor_id]['garbage'] = False
-                    routing_table[neighbor_id]['last_update_time'] = current_time
-                    routing_table[neighbor_id]['timeout'] = None
-                    routing_table[neighbor_id]['cost'] = origin_routing_table[neighbor_id]['cost']
-                    print("routing_table",routing_table)
-                    print("origin_routing_table",origin_routing_table)
-                #running algorithm with input pkt, output a new table and a bool
-                routing_table,update= ra.routing_algorithms(router_ID ,routing_table, pkt)
+                routing_table, update= ra.routing_algorithms(router_ID ,routing_table, pkt)
                 print_routing_table(routing_table)
                 if update:
                     trigger_update(routing_table,send_socket,neighbors)
-                #######################################
+ #--------------------------------------------------------------------------------#
 
     except KeyboardInterrupt:
         print("Server shutting down.")
