@@ -89,9 +89,8 @@ def trigger_update(routing_table,send_socket,neighbors):
         for destination, route_info in routing_table.items():
             #1: {'next_hop': 1, 'cost': 1, 'garbage': False},
             neighbor_id = neighbor_mapping[neighbor_port]
-            rip_pkt = packet.rip_packet(router_ID, routing_table)
-            if (route_info['next_hop'] == neighbor_id) and destination != neighbor_id:
-                rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
+
+            rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
         send_to_neighbors(send_socket, neighbor_port, rip_pkt)
 
 def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt):
