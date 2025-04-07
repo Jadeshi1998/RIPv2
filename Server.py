@@ -106,6 +106,11 @@ def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt)
             routing_table[neighbor_id]['cost'] = origin_routing_table[neighbor_id]['cost']
             update = True
     #running algorithm with input pkt, output a new table and a bool
+        if routing_table[neighbor_id]['cost'] > origin_routing_table[neighbor_id]['cost']:
+            routing_table[neighbor_id]['cost'] = origin_routing_table[neighbor_id]['cost']
+            routing_table[neighbor_id]['next_hop'] = neighbor_id
+            routing_table[neighbor_id]['last_update_time'] = current_time
+            update = True
     if neighbor_id  not in routing_table:
         routing_table[neighbor_id] = {'next_hop': neighbor_id, 'cost': pkt['header'][2], 'garbage': False, 'last_update_time': current_time}
         update = True
@@ -141,7 +146,7 @@ def print_RIP(receive_port,pkt):
     print("Header:")
     print(f"  Version: {pkt['header'][0]}")
     print(f"  Type: {pkt['header'][1]}")
-    print(f"  Length: {pkt['header'][2]}")
+    print(f"  Source_Router: {pkt['header'][2]}")
     print("Entries:")
     for entry in pkt['entry']:
         print(f"  Destination: {entry[0]}, Cost: {entry[1]}")
