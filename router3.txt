@@ -1,3 +1,3 @@
 router-id 3
-input-ports 3331, 3332, 3333, 3334, 3335, 3336
+input-ports 3331, 3332
 output-ports 2222-3-2, 4441-4-4 

@@ -86,11 +86,8 @@ def trigger_update(routing_table,send_socket,neighbors):
     global router_ID   
     global neighbor_mapping 
     for neighbor_port in neighbors:
-        for destination, route_info in routing_table.items():
-            #1: {'next_hop': 1, 'cost': 1, 'garbage': False},
-            neighbor_id = neighbor_mapping[neighbor_port]
-
-            rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
+        neighbor_id = neighbor_mapping[neighbor_port]
+        rip_pkt = packet.set_poisoned_reverse(router_ID, routing_table, neighbor_id)
         send_to_neighbors(send_socket, neighbor_port, rip_pkt)
 
 def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt):
@@ -164,6 +161,7 @@ def main(config_filename):
     sockets = create_and_bind(input_ports)
     send_socket = sockets[0]  # First socket for sending
     for neighbor_port in neighbors:
+        print("neighbor_port" + str(neighbor_port))
         send_to_neighbors(send_socket, neighbor_port, init_rip_pkt)
 ######################-------------init-------------########################
 
@@ -196,7 +194,7 @@ def main(config_filename):
                 print_RIP(receive_port,pkt)
                 
                 if receive_port not in neighbor_mapping:
-                    neighbor_mapping[receive_port] = pkt['header'][0]
+                    neighbor_mapping[receive_port] = pkt['header'][2]
                 neighbor_id = neighbor_mapping[receive_port]
                 
                 routing_table = ra.timer_update(routing_table,neighbor_id,pkt)
