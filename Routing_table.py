@@ -37,6 +37,7 @@ def flag_garbage(destination,routing_table):
         print("!"*40)
         print(f"Route to {destination} expired 120s -> garbage collection")
     return routing_table
+
 def set_infinity(destination,routing_table):
     """ Set a route's metric to infinity. """
     if destination in routing_table:

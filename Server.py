@@ -18,9 +18,9 @@ import RIP_packet as packet
 
 global router_ID
 global neighbor_mapping 
-global current_time
 
-current_time = time.time()
+
+
 router_ID = None
 neighbor_mapping={}
 #neighbor_mapping = {port: neighbor_id}
@@ -100,7 +100,7 @@ def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt)
     Add this neighbor router back to the routing table.
     The rest of the routing table will be updated by the routing algorithm.
     """
-    global current_time
+    current_time = time.time()
     update = False
     if neighbor_id in routing_table:
         if routing_table[neighbor_id]['garbage'] == True:
@@ -117,7 +117,7 @@ def add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt)
 
 def check_alive(destinations_to_check,routing_table):
     """Check if the route in the routing table is still alive."""
-    global current_time
+    current_time = time.time()
     for destination in destinations_to_check:
         route_info = routing_table[destination]
         #180s not recive from this port:
