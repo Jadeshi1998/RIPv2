@@ -121,10 +121,10 @@ def check_alive(destinations_to_check,routing_table):
     for destination in destinations_to_check:
         route_info = routing_table[destination]
         #180s not recive from this port:
-        if current_time - route_info['last_update_time'] > 30 and route_info['garbage'] == False:
+        if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
             routing_table = table.set_infinity(destination,routing_table)
             routing_table = table.flag_garbage(destination,routing_table)
-        if route_info['garbage'] == True and current_time - route_info['last_update_time'] >= 35:
+        if route_info['garbage'] == True and current_time - route_info['last_update_time'] >= 80:
             routing_table = table.remove_route(destination,routing_table)
     return routing_table
 
@@ -199,7 +199,8 @@ def main(config_filename):
                 if receive_port not in neighbor_mapping:
                     neighbor_mapping[receive_port] = pkt['header'][0]
                 neighbor_id = neighbor_mapping[receive_port]
-                routing_table = ra.timer_update(routing_table,neighbor_id)
+                
+                routing_table = ra.timer_update(routing_table,neighbor_id,pkt)
                  
                 update = add_neighbor_router_back(routing_table,neighbor_id,origin_routing_table,pkt)
 

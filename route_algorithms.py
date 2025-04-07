@@ -45,12 +45,17 @@ def routing_algorithms(router_ID, table, packet):
     return table, update
 
 
-def timer_update(table, port_id):
+def timer_update(table, port_id,pkt):
     current_time = time.time()
-  
+    pkt_destinations =[]
+    src_router_id = pkt['header'][2]
+    for entry in pkt['entry']:
+        destination = entry[0]
+        pkt_destinations.append(destination)
     for destination, route_info in table.items():
         if route_info['next_hop'] == port_id:
-            table[destination]['last_update_time'] = current_time
+            if destination in pkt_destinations or destination == src_router_id:
+                table[destination]['last_update_time'] = current_time
     return table
 
 # Example routing tables
