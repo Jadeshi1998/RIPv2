@@ -1,4 +1,5 @@
 import time
+import routing_table as rt
 METRIC_INFINITY = 16
 
 def routing_algorithms(router_ID, table, packet):  
@@ -23,7 +24,9 @@ def routing_algorithms(router_ID, table, packet):
             # Scenario 1: If the destination is not in the current routing table, add a new destination
             if destination not in table:
                 if new_cost < METRIC_INFINITY:
-                    table[destination] = {'next_hop': src_router_id, 'cost': new_cost, 'garbage': False, 'last_update_time': time.time()}
+                    print(f"New route to {destination} via {src_router_id} with cost {new_cost} added.")
+                    rt.new_route(destination, src_router_id, new_cost,table,time = time.time(), garbage=False)
+                    #4.2 Implement triggered updates only when routes become invalid
                     update = True
     
             else:

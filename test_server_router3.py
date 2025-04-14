@@ -1,5 +1,5 @@
 import Server as s
-import config as cfg
+import config_processer as cfg
 config_filename = 'router3.txt'
 s.main(config_filename)
 #python3 test_server_router3.py 

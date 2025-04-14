@@ -51,7 +51,7 @@ def read_config(filename):
 
 def test():
     config_filename = 'router4.txt'  
-    config = read_config(config_filename)
+    #config = read_config(config_filename)
     #print(config)
 
 #test()

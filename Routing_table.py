@@ -1,10 +1,8 @@
 """
-    信息的存储地在router内部储存记录了当前网络的拓扑结构和最佳路径。
     Routing Table Structure
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |     Dest(key)   |   Next Hop   |   Cost   |   Garbage(bool)    |
-    +---------------+---------------+-------------------------------+
-
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    |   Dest(key) |  Next Hop | Cost | update timer  |  garbage   | 
+    +-------------+-----------+------+---------------+------------+
 """
 import time
 
@@ -20,6 +18,7 @@ def new_route(destination, next_hop, cost,routing_table,time = time.time(), garb
     'last_update_time': time,
     'garbage': garbage,
     }
+
 def remove_route(destination,routing_table):
     """Remove a route from the routing table."""
     if destination in routing_table:
