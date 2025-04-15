@@ -45,3 +45,41 @@ def read_config(filename):
     'output_ports': output_ports
     }
     return config
+    
+
+##########################test cases#########################
+def good_test():
+    config_filename = 'router4.txt'  
+    config = read_config(config_filename)
+    print(config)
+    # {'router_id': 4, 'input_ports': [4441, 4442, 4443], 'output_ports': [[3332, 4, 3], [7772, 6, 7], [5551, 2, 5]]}
+
+def test_invalid_input_port():
+    config_filename = 'invalid_input_port.txt'  
+    config = read_config(config_filename)
+    print(config)
+    #ValueError: ERROR: Invalid input port 1111111. Must be in range 1024-64000.
+
+def test_invalid_router_id():
+    config_filename = 'invalid_router_id.txt'
+    config = read_config(config_filename)
+    print(config)
+    #ValueError: ERROR: router_id must be an integer.
+    
+def test_invalid_output_port():
+    config_filename = 'invalid_output_port.txt'
+    config = read_config(config_filename)   
+    print(config)
+    #ValueError: ERROR: Invalid output-port format
+
+def test_empty():
+    config_filename = 'empty.txt'
+    config = read_config(config_filename)
+    print(config)
+    #ValueError: ERROR: Configuration file is empty.
+
+#good_test()
+#test_invalid_input_port()
+#test_invalid_router_id()
+#test_invalid_output_port()
+test_empty()
