@@ -8,15 +8,15 @@ def read_config(filename):
     router_id = 0
     input_ports=[]
     output_ports=[]
-    file=open(filename,'r')
-    lines = file.readlines()
+    with open(filename, 'r') as file:
+        lines = file.readlines()
 
-    if not lines:
-        raise ValueError("ERROR: Configuration file is empty.")
-    
-    for line in file.readlines():
-        line = re.split(', | |\n',line)
-        router_txt.append(line)
+        if not lines:
+            raise ValueError("ERROR: Configuration file is empty.")
+        
+        for line in lines:
+            line = re.split(', | |\n', line)
+            router_txt.append(line)
 
     try:
         router_id = int(router_txt[0][1])
