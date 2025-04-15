@@ -8,7 +8,6 @@ import socket
 import select
 import time
 import random
-import copy
 
 
 import config_processer as cfg
@@ -130,12 +129,12 @@ def check_alive(destinations_to_check,routing_table,send_socket,neighbors):
     for destination in destinations_to_check:
         route_info = routing_table[destination]
         #180s not recive from this port:
-        if current_time - route_info['last_update_time'] > 60 and route_info['garbage'] == False:
+        if current_time - route_info['last_update_time'] > 120 and route_info['garbage'] == False:
             routing_table = table.set_infinity(destination,routing_table)
             routing_table = table.flag_garbage(destination,routing_table)
             print(f"@@@@ router invalid trigger update send to neighbors@@@@")
             trigger_update(routing_table,send_socket,neighbors)
-        if route_info['garbage'] == True and current_time - route_info['last_update_time'] >= 80:
+        if route_info['garbage'] == True and current_time - route_info['last_update_time'] >= 180:
             routing_table = table.remove_route(destination,routing_table)
             print(f"@@@@ router invalid trigger update send to neighbors@@@@")
             trigger_update(routing_table,send_socket,neighbors)
