@@ -111,8 +111,8 @@ def test_set_poisoned_reverse():
     assert poisoned_packet == exp_packet
     print("test_set_poisoned_reverse pass.")
 
-if __name__ == "__main__":
-    test_RIP_header()
-    test_RIP_entry()
-    test_rip_packet()
-    test_set_poisoned_reverse()
+
+test_RIP_header()
+test_RIP_entry()
+test_rip_packet()
+test_set_poisoned_reverse()
