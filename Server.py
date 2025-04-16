@@ -12,7 +12,7 @@ import random
 
 import config_processer as cfg
 import routing_algorithm as ra
-import routing_table as table
+import Routing_table as table
 import RIP_packet as packet
 
 global router_ID
@@ -167,6 +167,34 @@ def print_RIP(receive_port,pkt):
     print("-" * 50)
     print("  ")
 
+def check_pkt(pkt):
+    """Check if the received packet is valid."""
+    if 'header' not in pkt or 'entry' not in pkt:
+        raise ValueError("ERROR: Invalid packet format,must contain 'header' and 'entry'")
+    #check header
+    if len(pkt['header']) != 3:
+        raise ValueError("ERROR: Invalid packet header length, must be 3")
+    if pkt['header'][0] !=2:#应该是1还是2 还是都行
+        raise ValueError("ERROR: Invalid command, must be 2")
+    if pkt['header'][1] != 2:
+        raise ValueError("ERROR: Invalid version, must be 2")
+    if pkt['header'][2] <= 0:
+        raise ValueError("ERROR: Invalid source router ID, must be positive integer")
+    if pkt['header'][2] > 64000:
+        raise ValueError("ERROR: Invalid source router ID, must be less than 64000")
+    #check entry
+    if len(pkt['entry']) == 0:
+        raise ValueError("ERROR: Invalid packet entry, must contain at least one entry")
+    for entry in pkt['entry']:
+        if len(entry) != 2:
+            raise ValueError("ERROR: Invalid entry , must be [destination, metric] ")
+        if entry[0] <= 0:
+            raise ValueError("ERROR: Invalid destination router ID, must be positive integer")
+        if entry[0] > 64000:
+            raise ValueError("ERROR: Invalid destination router ID, must be less than 64000")
+        if entry[1] < 0 or entry[1] > 16:
+            raise ValueError("ERROR: Invalid metric, must be in range 0-16")
+    return pkt
 
 def main(config_filename):
     """Run the server to listen on multiple UDP sockets and send to neighbors."""
@@ -217,6 +245,8 @@ def main(config_filename):
                 data, addr = sock.recvfrom(1024)  # Buffer size is 1024 bytes
                 pkt = str_to_pkt(data.decode())
                 receive_port = addr[1]
+                
+                pkt=check_pkt(pkt)
 
                 print_RIP(receive_port,pkt)
                 
