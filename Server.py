@@ -247,7 +247,7 @@ def main(config_filename):
                 pkt = str_to_pkt(data.decode())
                 receive_port = addr[1]
                 
-                check_pkt(pkt)
+                pkt=check_pkt(pkt)
 
                 print_RIP(receive_port,pkt)
                 
