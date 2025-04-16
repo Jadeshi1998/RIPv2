@@ -12,7 +12,11 @@ def read_config(filename):
     for line in file.readlines():
         line = re.split(', | |\n',line)
         router_txt.append(line)
-    #print(f"Router text : {router_txt}")
+    print(f"Router text : {router_txt}")
+    if router_txt == []:
+        raise ValueError("ERROR: Invalid router config file, empty file")
+    if len(router_txt) != 3:
+        raise ValueError("ERROR: Invalid router config file, must be 3 lines")
 
     #get router_id
     router_id=check_router_id(router_txt[0])
@@ -89,7 +93,7 @@ def check_output_ports(line,input_ports):
                 raise ValueError(f"ERROR: Invalid output-port format, must be 'output-ports <peer_port> <metric> <peer_ID>'")
             if port[0].isalpha() or port[1].isalpha() or port[2].isalpha():
                 raise ValueError(f"ERROR: Invalid output_ports format, output_ports must be not an alphabetic string, not {port}")
-            # check port[0]
+
             # check port[1]
             if port[1].isdigit():
                 if int(port[1])<0:
@@ -121,7 +125,7 @@ def check_output_ports(line,input_ports):
                         raise ValueError(f"ERROR: Invalid output_ports format, port must be unique, {port[0]} is already used")
                
                 check_same_ports.append(port[0])
-                #check_same_ports.append(port[0])
+ 
             else:
                 if port[0].startswith('-'):
                     raise ValueError(f"ERROR: Invalid output_ports format, port must be positive integer, not {port[0]}")
@@ -138,4 +142,4 @@ def test():
     config = read_config(config_filename)
     print(config)
 
-#test()
+test()
