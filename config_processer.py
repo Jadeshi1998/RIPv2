@@ -12,7 +12,7 @@ def read_config(filename):
     for line in file.readlines():
         line = re.split(', | |\n',line)
         router_txt.append(line)
-    print(f"Router text : {router_txt}")
+    #print(f"Config file readed: {router_txt}")
     if router_txt == []:
         raise ValueError("ERROR: Invalid router config file, empty file")
     if len(router_txt) != 3:
@@ -137,9 +137,3 @@ def check_output_ports(line,input_ports):
            
         return output_list
 
-def test():
-    config_filename = 'router1.txt'  
-    config = read_config(config_filename)
-    print(config)
-
-test()

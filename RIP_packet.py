@@ -1,7 +1,4 @@
 """
-用于在路由器之间传输路由信息,当一个路由器接收到RIP数据包时,它会解析数据包并根据其中的路由条目更新其路由表。
-周期性更新: 30s.
-当路由信息发生变化时(eg.，某条路由变得不可达），路由器会立即发送更新。
     Send to each neiboure for update the
     RIP Packet Structure 
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -60,8 +57,3 @@ def set_poisoned_reverse(router_ID, table, port_id):
     }
     return poisoned_packet
 
-#router_id = 1
-#table = {3: {'next_hop': 5, 'cost': 2, 'garbage': False}, 4: {'next_hop': 4, 'cost': 3, 'garbage': False}} # (destination:{next_hop, cost ,garbage flag})
-#packet = rip_packet(router_id, table)
-#print(packet)
-#{'header': [1, 2, 1], 'entry': [[3, 2], [4, 3]]}

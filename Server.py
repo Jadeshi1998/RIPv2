@@ -12,7 +12,7 @@ import random
 
 import config_processer as cfg
 import routing_algorithm as ra
-import Routing_table as table
+import routing_table as table
 import RIP_packet as packet
 
 global router_ID
@@ -174,7 +174,7 @@ def check_pkt(pkt):
     #check header
     if len(pkt['header']) != 3:
         raise ValueError("ERROR: Invalid packet header length, must be 3")
-    if pkt['header'][0] !=2:#应该是1还是2 还是都行
+    if pkt['header'][0] !=2:
         raise ValueError("ERROR: Invalid command, must be 2")
     if pkt['header'][1] != 2:
         raise ValueError("ERROR: Invalid version, must be 2")
