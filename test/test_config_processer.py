@@ -1,5 +1,5 @@
 import re
-
+import os
  
 def read_config(filename):
     #dictionary to store the router_id and input_ports
@@ -8,11 +8,16 @@ def read_config(filename):
     router_id = 0
     input_ports=[]
     output_ports=[]
-    file=open(filename,'r')
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'router', filename)
+    file=open( file_path,'r')
     for line in file.readlines():
         line = re.split(', | |\n',line)
         router_txt.append(line)
-    #print(f"Router text : {router_txt}")
+    #print(f"Config file readed: {router_txt}")
+    if router_txt == []:
+        raise ValueError("ERROR: Invalid router config file, empty file")
+    if len(router_txt) != 3:
+        raise ValueError("ERROR: Invalid router config file, must be 3 lines")
 
     #get router_id
     router_id=check_router_id(router_txt[0])
@@ -89,7 +94,7 @@ def check_output_ports(line,input_ports):
                 raise ValueError(f"ERROR: Invalid output-port format, must be 'output-ports <peer_port> <metric> <peer_ID>'")
             if port[0].isalpha() or port[1].isalpha() or port[2].isalpha():
                 raise ValueError(f"ERROR: Invalid output_ports format, output_ports must be not an alphabetic string, not {port}")
-            # check port[0]
+
             # check port[1]
             if port[1].isdigit():
                 if int(port[1])<0:
@@ -121,7 +126,7 @@ def check_output_ports(line,input_ports):
                         raise ValueError(f"ERROR: Invalid output_ports format, port must be unique, {port[0]} is already used")
                
                 check_same_ports.append(port[0])
-                #check_same_ports.append(port[0])
+ 
             else:
                 if port[0].startswith('-'):
                     raise ValueError(f"ERROR: Invalid output_ports format, port must be positive integer, not {port[0]}")
@@ -132,6 +137,8 @@ def check_output_ports(line,input_ports):
         
            
         return output_list
+
+
 
 def test():
     config_filename = 'router1.txt'  
@@ -214,19 +221,19 @@ def test_empty():
     try:
         config = read_config(config_filename)
     except ValueError as e:
-        expected_message = "ERROR: Configuration file is empty."
+        expected_message = "ERROR: Invalid router config file, empty file"
         assert str(e) == expected_message, f"Unexpected error message: {e}"
         print("Correct error raised:", e)
 
-
-test_router1()
-test_router2()
-test_router3()
-test_router4()
-test_router5()
-test_router6()
-test_router7()
-test_invalid_input_port()
-test_invalid_router_id()
-test_invalid_output_port()
-test_empty()
+if __name__ == '__main__':
+    test_router1()
+    test_router2()
+    test_router3()
+    test_router4()
+    test_router5()
+    test_router6()
+    test_router7()
+    test_invalid_input_port()
+    test_invalid_router_id()
+    test_invalid_output_port()
+    test_empty()

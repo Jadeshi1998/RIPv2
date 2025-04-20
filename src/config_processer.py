@@ -1,5 +1,5 @@
 import re
-
+import os
  
 def read_config(filename):
     #dictionary to store the router_id and input_ports
@@ -8,7 +8,8 @@ def read_config(filename):
     router_id = 0
     input_ports=[]
     output_ports=[]
-    file=open(filename,'r')
+    file_path = os.path.join(os.path.dirname(__file__), '..', 'router', filename)
+    file=open( file_path,'r')
     for line in file.readlines():
         line = re.split(', | |\n',line)
         router_txt.append(line)

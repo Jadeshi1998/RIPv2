@@ -10,14 +10,13 @@ import time
 import random
 
 
-import config_processer as cfg
-import routing_algorithm as ra
-import routing_table as table
-import RIP_packet as packet
+#import config_processer as cfg
+#import routing_algorithm as ra
+#import routing_table as table
+#import RIP_packet as packet
 
 global router_ID
 global neighbor_mapping 
-
 
 
 router_ID = None
@@ -246,22 +245,26 @@ def main(config_filename):
                 pkt = str_to_pkt(data.decode())
                 receive_port = addr[1]
                 
-                pkt=check_pkt(pkt)
+                try:
+                    valid_pkt = check_pkt(pkt)
+                except ValueError as error:
+                    print(error)
+                    continue
 
-                print_RIP(receive_port,pkt)
+                print_RIP(receive_port,valid_pkt)
                 
                 if receive_port not in neighbor_mapping:
-                    neighbor_mapping[receive_port] = pkt['header'][2]
+                    neighbor_mapping[receive_port] = valid_pkt['header'][2]
 
                 neighbor_id = neighbor_mapping[receive_port]
                 
-                routing_table = ra.timer_update(routing_table,neighbor_id,pkt)
-                update = add_neighbor_router_back(routing_table,neighbor_id,origin_routing_info,pkt)
+                routing_table = ra.timer_update(routing_table,neighbor_id,valid_pkt)
+                update = add_neighbor_router_back(routing_table,neighbor_id,origin_routing_info,valid_pkt)
                 if update:
                     print(f"@@@@@@@@@ Neighbor {neighbor_id} is back to alive @@@@@@@@@")
                     print(f"@@@@@@@@@@@@@@@@ Routing table update @@@@@@@@@@@@@@@@@")
                     print_routing_table(routing_table)
-                routing_table, update= ra.routing_algorithms(router_ID ,routing_table, pkt)
+                routing_table, update= ra.routing_algorithms(router_ID ,routing_table, valid_pkt)
                 if update:
                     print(f"Routing table update from {receive_port}:")
                     print_routing_table(routing_table)
