@@ -25,7 +25,7 @@ def remove_route(destination,routing_table):
         del routing_table[destination]
         print("  ")
         print("!"*40)
-        print(f"Route to {destination} expired 180s -> remove_route")
+        print(f"Route to {destination} garbage collection 180s -> remove_route")
     return routing_table
 
 def flag_garbage(destination,routing_table):
@@ -34,7 +34,7 @@ def flag_garbage(destination,routing_table):
         routing_table[destination]['garbage'] = True
         print("  ")
         print("!"*40)
-        print(f"Route to {destination} expired 120s -> garbage collection")
+        print(f"Route to {destination} expired 180s -> garbage collection")
     return routing_table
 
 def set_infinity(destination,routing_table):
