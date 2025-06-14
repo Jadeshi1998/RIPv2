@@ -3,8 +3,8 @@
 A routing daemon based on the **RIP-2 (Routing Information Protocol v2)** specification.  
 Implements distance-vector routing with support for **Split Horizon with Poison Reverse**, triggered updates, timeout handling, and more.
 
-📄 *[Read the report](#)* 
-*https://github.com/Jadeshi1998/RIPv2/blob/github/doc/Shunzhi%26Yumeng.pdf*
+📄 *[Read the report](https://github.com/Jadeshi1998/RIPv2/blob/github/doc/Shunzhi%26Yumeng.pdf)* 
+
 
 *👍 Yumeng Shi & Shunzhi Zhang*
 ---
